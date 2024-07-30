@@ -7,6 +7,7 @@
 #include <QTimer>
 #include <QHBoxLayout>
 #include <QPushButton>
+#include <QGridLayout>
 
 class HomeScreen : public QMainWindow
 {
@@ -21,17 +22,20 @@ protected:
 
 private slots:
     void updateTime();
-    void buttonClicked();
+    void areaButtonClicked();
+    void optionButtonClicked();
 
 private:
     void geometry();
     void setUpTopPanel();
     void setUpAreaPanel();
+    void setUpOptionPanel();
     void adjustFontSizes();
 
     QWidget *centralWidget;
     QWidget *topPanel;
     QWidget *areaPanel;
+    QWidget *optionPanel;
 
     QLabel *titleLabel;
     QLabel *timeLabel;
@@ -39,8 +43,10 @@ private:
     QTimer *timer;
 
     QHBoxLayout *areaPanelLayout;
+    QGridLayout *optionPanelLayout;
 
-    QPushButton *currentButton;
+    QPushButton *currentAreaButton;
+    QPushButton *currentOptionButton;
 };
 
 #endif // HOMESCREEN_H
