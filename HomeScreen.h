@@ -30,6 +30,8 @@ private:
     void setUpTopPanel();
     void setUpAreaPanel();
     void setUpOptionPanel();
+    void allDevicesButtons();
+    void pcButtons();
     void adjustFontSizes();
 
     QWidget *centralWidget;
@@ -41,6 +43,11 @@ private:
     QLabel *timeLabel;
     QLabel *dateLabel;
     QTimer *timer;
+
+    QPushButton *allDevicesButton;
+    QPushButton *pcButton;
+    QPushButton *bedroomButton;
+    QPushButton *homeButton;
 
     QHBoxLayout *areaPanelLayout;
     QGridLayout *optionPanelLayout;
