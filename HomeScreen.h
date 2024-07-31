@@ -23,21 +23,31 @@ protected:
 private slots:
     void updateTime();
     void areaButtonClicked();
+    void statusButtonClicked();
     void optionButtonClicked();
+
+    void handleShutDown();
+    void handleRestart();
+    void handleSleep();
+    void handleLock();
+    void handleWiFiDetails();
 
 private:
     void geometry();
     void setUpTopPanel();
     void setUpAreaPanel();
     void setUpOptionPanel();
+    void setUpInfoPanel();
     void allDevicesButtons();
     void pcButtons();
+    void updateInfoPanel(const QString &info);
     void adjustFontSizes();
 
     QWidget *centralWidget;
     QWidget *topPanel;
     QWidget *areaPanel;
     QWidget *optionPanel;
+    QWidget *infoPanel;
 
     QLabel *titleLabel;
     QLabel *timeLabel;
@@ -53,8 +63,10 @@ private:
 
     QHBoxLayout *areaPanelLayout;
     QGridLayout *optionPanelLayout;
+    QVBoxLayout *infoPanelLayout;
 
     QPushButton *currentAreaButton;
+    QPushButton *currentStatusButton;
     QPushButton *currentOptionButton;
 
     // Member variables for buttons
@@ -71,6 +83,8 @@ private:
     QPushButton *securityButton;
     QPushButton *remoteButton;
     QPushButton *systemButton;
+
+    QLabel *infoLabel;
 };
 
 #endif // HOMESCREEN_H

@@ -1,6 +1,9 @@
 #include "HomeScreen.h"
 #include <QTime>
 #include <QDate>
+#include <QProcess>
+#include <QMessageBox>
+#include <QNetworkInterface>
 
 HomeScreen::HomeScreen(QWidget *parent)
     : QMainWindow(parent), timer(new QTimer(this)), currentAreaButton(nullptr), currentOptionButton(nullptr)
@@ -16,6 +19,7 @@ HomeScreen::HomeScreen(QWidget *parent)
     setUpTopPanel();
     setUpAreaPanel();
     setUpOptionPanel();
+    setUpInfoPanel();
 
     // Connect the timer to the updateTime slot
     connect(timer, &QTimer::timeout, this, &HomeScreen::updateTime);
@@ -86,6 +90,12 @@ void HomeScreen::geometry()
                              areaPanel->height() + topPanel->height(),
                              windowWidth,
                              windowHeight - areaPanel->height() - topPanel->height() - 50);
+
+    // Info panel
+    infoPanel->setGeometry(0,
+                           areaPanel->height() + topPanel->height(),
+                           windowWidth / 2.5,
+                           windowHeight - areaPanel->height() - topPanel->height() - 50);
 }
 
 void HomeScreen::setUpTopPanel()
@@ -203,6 +213,32 @@ void HomeScreen::setUpAreaPanel()
     currentAreaButton = allDevicesButton;
 }
 
+void HomeScreen::setUpInfoPanel()
+{
+    infoPanel = new QWidget(centralWidget);
+    infoPanel->setStyleSheet("background-color: transparent;");
+
+    QFont textFont;
+    textFont.setPointSize(20);
+    textFont.setFamily("Arial");
+    textFont.setBold(true);
+
+    infoPanelLayout = new QVBoxLayout(infoPanel);
+
+    infoLabel = new QLabel(infoPanel);
+    infoLabel->setFont(textFont);
+    infoLabel->setStyleSheet("color: white;");
+
+    infoPanelLayout->addWidget(infoLabel);
+    infoPanel->setLayout(infoPanelLayout);
+    infoPanelLayout->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+}
+
+void HomeScreen::updateInfoPanel(const QString &info)
+{
+    infoLabel->setText(info);
+}
+
 void HomeScreen::areaButtonClicked()
 {
     // Get the button that was clicked
@@ -232,6 +268,9 @@ void HomeScreen::areaButtonClicked()
         delete child->widget();
         delete child;
     }
+
+    // reset the current option button when switching options (prevents crash)
+    currentOptionButton = nullptr;
 
     // Update the option panel based on the selected area button
     if (clickedAreaButton == allDevicesButton)
@@ -310,10 +349,17 @@ void HomeScreen::allDevicesButtons()
     thermostatButton = setUpButton("Thermostat", largeButtonSize, buttonStyle, 1, 1, optionPanelLayout);
 
     // Connect the buttons to the slot
-    connect(getUpButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
-    connect(leaveButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
-    connect(atHomeButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
-    connect(sleepButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
+    connect(getUpButton, &QPushButton::clicked, this, &HomeScreen::statusButtonClicked);
+    connect(leaveButton, &QPushButton::clicked, this, &HomeScreen::statusButtonClicked);
+    connect(atHomeButton, &QPushButton::clicked, this, &HomeScreen::statusButtonClicked);
+    connect(sleepButton, &QPushButton::clicked, this, &HomeScreen::statusButtonClicked);
+
+    connect(networkButton, &QPushButton::clicked, this, &HomeScreen::handleWiFiDetails);
+
+    // Connect the large buttons to the optionButtonClicked slot
+    connect(networkButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
+    connect(lightsButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
+    connect(thermostatButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
 
     smallButtonsLayout->setSpacing(10);
     smallButtonsLayout->setContentsMargins(0, 0, 0, 0);
@@ -321,7 +367,7 @@ void HomeScreen::allDevicesButtons()
 
     optionPanelLayout->addWidget(smallButtonsWidget, 0, 0);
 
-    currentOptionButton = atHomeButton;
+    currentStatusButton = atHomeButton;
 }
 
 void HomeScreen::pcButtons()
@@ -345,12 +391,25 @@ void HomeScreen::pcButtons()
     sleepButton = setUpButton("Sleep", smallButtonSize, buttonStyle, 1, 0, smallButtonsLayout);
     lockButton = setUpButton("Lock", smallButtonSize, buttonStyle, 1, 1, smallButtonsLayout);
 
+    // Connect the small buttons to their respective slots
+    connect(shutDownButton, &QPushButton::clicked, this, &HomeScreen::handleShutDown);
+    connect(restartButton, &QPushButton::clicked, this, &HomeScreen::handleRestart);
+    connect(sleepButton, &QPushButton::clicked, this, &HomeScreen::handleSleep);
+    connect(lockButton, &QPushButton::clicked, this, &HomeScreen::handleLock);
+
     // Create the large buttons
     networkButton = setUpButton("WI-FI", largeButtonSize, buttonStyle, 0, 1, optionPanelLayout);
     lightsButton = setUpButton("LEDs", largeButtonSize, buttonStyle, 1, 0, optionPanelLayout);
     securityButton = setUpButton("Security", largeButtonSize, buttonStyle, 1, 1, optionPanelLayout);
     remoteButton = setUpButton("Remote", largeButtonSize, buttonStyle, 0, 2, optionPanelLayout);
     systemButton = setUpButton("System", largeButtonSize, buttonStyle, 1, 2, optionPanelLayout);
+
+    connect(networkButton, &QPushButton::clicked, this, &HomeScreen::handleWiFiDetails);
+    connect(networkButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
+    connect(lightsButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
+    connect(securityButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
+    connect(remoteButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
+    connect(systemButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
 
     smallButtonsLayout->setSpacing(10);
     smallButtonsLayout->setContentsMargins(0, 0, 0, 0);
@@ -360,13 +419,98 @@ void HomeScreen::pcButtons()
     optionPanelLayout->addWidget(smallButtonsWidget, 0, 0);
 }
 
+void HomeScreen::handleShutDown()
+{
+    QProcess::startDetached("systemctl", QStringList() << "poweroff");
+}
+
+void HomeScreen::handleRestart()
+{
+    QProcess::startDetached("systemctl", QStringList() << "reboot");
+}
+
+void HomeScreen::handleSleep()
+{
+    QProcess::startDetached("systemctl", QStringList() << "suspend");}
+
+void HomeScreen::handleLock()
+{
+    QProcess::startDetached("xfce4-session-logout", QStringList() << "--logout");
+}
+
+void HomeScreen::handleWiFiDetails()
+{
+    // Prepare the terminal command to get Wi-Fi details
+    QString command = "nmcli -t -f active,ssid,bssid,mode,chan,rate,signal,device dev wifi";
+
+    // Execute the terminal command
+    QProcess process;
+    process.start("bash", QStringList() << "-c" << command);
+    process.waitForFinished();
+
+    // Read the output
+    QString wifiDetails = process.readAllStandardOutput();
+
+    // Check if the output is empty
+    if (wifiDetails.isEmpty()) {
+        wifiDetails = "No Wi-Fi interfaces found.";
+    } else {
+        // Format the output for display
+        QStringList lines = wifiDetails.split("\n");
+        wifiDetails = "";
+        for (const QString &line : lines) {
+            if (!line.trimmed().isEmpty()) {
+                QStringList details = line.split(":");
+                if (details.size() >= 10) {
+                    wifiDetails += "SSID: " + details[1] + "\n";
+                    wifiDetails += "BSSID: " + details[2] + "\n";
+                    wifiDetails += "Mode: " + details[3] + "\n";
+                    wifiDetails += "Channel: " + details[4] + "\n";
+                    wifiDetails += "Rate: " + details[5] + "\n";
+                    wifiDetails += "Signal: " + details[6] + "\n";
+                    wifiDetails += "Device: " + details[7] + "\n";
+                    if (details.size() > 11) {
+                        wifiDetails += "IPv6 Address: " + details[11] + "\n";
+                    }
+                    wifiDetails += "\n";
+                }
+            }
+        }
+    }
+
+    // Display Wi-Fi details in a message box
+    updateInfoPanel(wifiDetails);
+}
+
+void HomeScreen::statusButtonClicked()
+{
+    // Get the button that was clicked
+    QPushButton *clickedStatusButton = qobject_cast<QPushButton*>(sender());
+
+    // Reset the style of any previously selected button
+    if (currentStatusButton)
+    {
+        currentStatusButton->setStyleSheet("background-color: rgba(27,33,52,200);"
+                                           "color: white;"
+                                           "border-radius: 5px;");
+    }
+
+    // Set the style of the clicked button to indicate its selection
+    clickedStatusButton->setStyleSheet("background-color: rgba(58,94,171,255);"
+                                       "color: white;"
+                                       "border-radius: 5px;");
+
+    // Update the current button
+    currentStatusButton = clickedStatusButton;
+}
+
 void HomeScreen::optionButtonClicked()
 {
     // Get the button that was clicked
     QPushButton *clickedOptionButton = qobject_cast<QPushButton*>(sender());
 
     // Reset the style of any previously selected button
-    if (currentOptionButton)
+    if (currentOptionButton && currentOptionButton != clickedOptionButton)
     {
         currentOptionButton->setStyleSheet("background-color: rgba(27,33,52,200);"
                                            "color: white;"
