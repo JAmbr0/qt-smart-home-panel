@@ -92,10 +92,10 @@ void HomeScreen::geometry()
                              windowHeight - areaPanel->height() - topPanel->height() - 50);
 
     // Info panel
-    infoPanel->setGeometry(0,
-                           areaPanel->height() + topPanel->height(),
-                           windowWidth / 2.5,
-                           windowHeight - areaPanel->height() - topPanel->height() - 50);
+    infoPanel->setGeometry(5,
+                           areaPanel->height() + topPanel->height() + 50,
+                           windowWidth / 3,
+                           windowHeight - areaPanel->height() - topPanel->height() - 150);
 }
 
 void HomeScreen::setUpTopPanel()
@@ -216,7 +216,13 @@ void HomeScreen::setUpAreaPanel()
 void HomeScreen::setUpInfoPanel()
 {
     infoPanel = new QWidget(centralWidget);
-    infoPanel->setStyleSheet("background-color: transparent;");
+    infoPanel->setStyleSheet("background-color: rgba(27,33,52,200);"
+                             "border-radius: 30;");
+
+    QFont titleFont;
+    titleFont.setPointSize(30);
+    titleFont.setFamily("Arial");
+    titleFont.setBold(true);
 
     QFont textFont;
     textFont.setPointSize(20);
@@ -225,17 +231,27 @@ void HomeScreen::setUpInfoPanel()
 
     infoPanelLayout = new QVBoxLayout(infoPanel);
 
+    infoTitleLabel = new QLabel(infoPanel);
+    infoTitleLabel->setFont(titleFont);
+    infoTitleLabel->setStyleSheet("color: white;");
+
     infoLabel = new QLabel(infoPanel);
     infoLabel->setFont(textFont);
     infoLabel->setStyleSheet("color: white;");
 
+    infoPanelLayout->addSpacing(15);
+    infoPanelLayout->addWidget(infoTitleLabel);
+    infoPanelLayout->addSpacing(30);
     infoPanelLayout->addWidget(infoLabel);
+    infoPanelLayout->setContentsMargins(25, 0, 0, 0);
+
     infoPanel->setLayout(infoPanelLayout);
     infoPanelLayout->setAlignment(Qt::AlignTop | Qt::AlignLeft);
 }
 
-void HomeScreen::updateInfoPanel(const QString &info)
+void HomeScreen::updateInfoPanel(const QString &title, const QString &info)
 {
+    infoTitleLabel->setText(title);
     infoLabel->setText(info);
 }
 
@@ -348,15 +364,13 @@ void HomeScreen::allDevicesButtons()
     lightsButton = setUpButton("Lights", largeButtonSize, buttonStyle, 1, 0, optionPanelLayout);
     thermostatButton = setUpButton("Thermostat", largeButtonSize, buttonStyle, 1, 1, optionPanelLayout);
 
-    // Connect the buttons to the slot
+    // Connect the small buttons to their slot
     connect(getUpButton, &QPushButton::clicked, this, &HomeScreen::statusButtonClicked);
     connect(leaveButton, &QPushButton::clicked, this, &HomeScreen::statusButtonClicked);
     connect(atHomeButton, &QPushButton::clicked, this, &HomeScreen::statusButtonClicked);
     connect(sleepButton, &QPushButton::clicked, this, &HomeScreen::statusButtonClicked);
 
-    connect(networkButton, &QPushButton::clicked, this, &HomeScreen::handleWiFiDetails);
-
-    // Connect the large buttons to the optionButtonClicked slot
+    // Connect the large buttons to their slot
     connect(networkButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
     connect(lightsButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
     connect(thermostatButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
@@ -404,7 +418,6 @@ void HomeScreen::pcButtons()
     remoteButton = setUpButton("Remote", largeButtonSize, buttonStyle, 0, 2, optionPanelLayout);
     systemButton = setUpButton("System", largeButtonSize, buttonStyle, 1, 2, optionPanelLayout);
 
-    connect(networkButton, &QPushButton::clicked, this, &HomeScreen::handleWiFiDetails);
     connect(networkButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
     connect(lightsButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
     connect(securityButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
@@ -440,46 +453,31 @@ void HomeScreen::handleLock()
 
 void HomeScreen::handleWiFiDetails()
 {
-    // Prepare the terminal command to get Wi-Fi details
-    QString command = "nmcli -t -f active,ssid,bssid,mode,chan,rate,signal,device dev wifi";
+    // A list of example Wi-Fi details
+    QStringList wifiDetailsList = {
+        "SSID: ExampleNetwork1",
+        "BSSID: AA:BB:CC:DD:EE:FF",
+        "Mode: Infrastructure",
+        "Channel: 6",
+        "Rate: 54 Mbit/s",
+        "Signal: 70",
+        "Device: wlan0",
+        "",
+        "SSID: ExampleNetwork2",
+        "BSSID: 11:22:33:44:55:66",
+        "Mode: Infrastructure",
+        "Channel: 11",
+        "Rate: 150 Mbit/s",
+        "Signal: 80",
+        "Device: wlan1"
+    };
 
-    // Execute the terminal command
-    QProcess process;
-    process.start("bash", QStringList() << "-c" << command);
-    process.waitForFinished();
-
-    // Read the output
-    QString wifiDetails = process.readAllStandardOutput();
-
-    // Check if the output is empty
-    if (wifiDetails.isEmpty()) {
-        wifiDetails = "No Wi-Fi interfaces found.";
-    } else {
-        // Format the output for display
-        QStringList lines = wifiDetails.split("\n");
-        wifiDetails = "";
-        for (const QString &line : lines) {
-            if (!line.trimmed().isEmpty()) {
-                QStringList details = line.split(":");
-                if (details.size() >= 10) {
-                    wifiDetails += "SSID: " + details[1] + "\n";
-                    wifiDetails += "BSSID: " + details[2] + "\n";
-                    wifiDetails += "Mode: " + details[3] + "\n";
-                    wifiDetails += "Channel: " + details[4] + "\n";
-                    wifiDetails += "Rate: " + details[5] + "\n";
-                    wifiDetails += "Signal: " + details[6] + "\n";
-                    wifiDetails += "Device: " + details[7] + "\n";
-                    if (details.size() > 11) {
-                        wifiDetails += "IPv6 Address: " + details[11] + "\n";
-                    }
-                    wifiDetails += "\n";
-                }
-            }
-        }
-    }
+    // Join the list into a single string
+    QString wifiDetails = wifiDetailsList.join("\n");
 
     // Display Wi-Fi details in a message box
-    updateInfoPanel(wifiDetails);
+    QString title = "Network";
+    updateInfoPanel(title, wifiDetails);
 }
 
 void HomeScreen::statusButtonClicked()
@@ -502,6 +500,17 @@ void HomeScreen::statusButtonClicked()
 
     // Update the current button
     currentStatusButton = clickedStatusButton;
+
+    // Display info based on the clicked button
+    if (clickedStatusButton == getUpButton) {
+        updateInfoPanel("Get Up", "Get up and start your day.");
+    } else if (clickedStatusButton == leaveButton) {
+        updateInfoPanel("Leave", "You are leaving the house.");
+    } else if (clickedStatusButton == atHomeButton) {
+        updateInfoPanel("Home", "You are at home.");
+    } else if (clickedStatusButton == sleepButton) {
+        updateInfoPanel("Sleep", "Time to go to sleep.");
+    }
 }
 
 void HomeScreen::optionButtonClicked()
@@ -509,19 +518,40 @@ void HomeScreen::optionButtonClicked()
     // Get the button that was clicked
     QPushButton *clickedOptionButton = qobject_cast<QPushButton*>(sender());
 
-    // Reset the style of any previously selected button
+    // Check if the clicked button is different from the current option button
     if (currentOptionButton && currentOptionButton != clickedOptionButton)
     {
+        // Reset the style of the previously selected button
         currentOptionButton->setStyleSheet("background-color: rgba(27,33,52,200);"
                                            "color: white;"
                                            "border-radius: 5px;");
+
+        // Reset the info panel when the option button changes
+        QString title = "Information";
+        QString info = "Select an option to see details.";
+        updateInfoPanel(title, info);
     }
 
-    // Set the stle of the clicked button to indicate its selection
+    // Set the style of the clicked button to indicate its selection
     clickedOptionButton->setStyleSheet("background-color: rgba(58,94,171,255);"
                                        "color: white;"
                                        "border-radius: 5px;");
 
     // Update the current button
     currentOptionButton = clickedOptionButton;
+
+    // Display info based on the clicked button
+    if (clickedOptionButton == networkButton) {
+        handleWiFiDetails();
+    } else if (clickedOptionButton == lightsButton) {
+        updateInfoPanel("Lights", "Control your home lighting system.");
+    } else if (clickedOptionButton == thermostatButton) {
+        updateInfoPanel("Thermostat", "Adjust the temperature settings.");
+    } else if (clickedOptionButton == securityButton) {
+        updateInfoPanel("Security", "Manage your home security settings.");
+    } else if (clickedOptionButton == remoteButton) {
+        updateInfoPanel("Remote", "Access and control remote devices.");
+    } else if (clickedOptionButton == systemButton) {
+        updateInfoPanel("System", "View and manage system settings.");
+    }
 }

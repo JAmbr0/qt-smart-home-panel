@@ -40,7 +40,7 @@ private:
     void setUpInfoPanel();
     void allDevicesButtons();
     void pcButtons();
-    void updateInfoPanel(const QString &info);
+    void updateInfoPanel(const QString &title, const QString &info);
     void adjustFontSizes();
 
     QWidget *centralWidget;
@@ -84,6 +84,7 @@ private:
     QPushButton *remoteButton;
     QPushButton *systemButton;
 
+    QLabel *infoTitleLabel;
     QLabel *infoLabel;
 };
 
