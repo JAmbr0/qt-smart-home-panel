@@ -262,24 +262,30 @@ void HomeScreen::setUpOptionPanel()
     optionPanelLayout->setAlignment(Qt::AlignLeft | Qt::AlignCenter);
 }
 
-void HomeScreen::allDevicesButtons()
+QPushButton* HomeScreen::setUpButton(const QString &text, const QSize &size, const QString &style, int row, int col, QGridLayout *layout)
 {
-    // Create a widget to hold the secondary grid layout
-    QWidget *smallButtonsWidget = new QWidget;
-
-    // Create the buttons
-    QPushButton *getUpButton = new QPushButton("Get Up");
-    QPushButton *leaveButton = new QPushButton("Leave");
-    QPushButton *atHomeButton = new QPushButton("Home");
-    QPushButton *sleepButton = new QPushButton("Sleep");
-    QPushButton *networkButton = new QPushButton("Network");
-    QPushButton *lightsButton = new QPushButton("Lights");
-    QPushButton *thermostatButton = new QPushButton("Thermostat");
+    QPushButton *button = new QPushButton(text);
+    button->setFixedSize(size);
+    button->setStyleSheet(style);
 
     QFont buttonFont;
     buttonFont.setPointSize(16);
     buttonFont.setFamily("Arial");
     buttonFont.setBold(true);
+    button->setFont(buttonFont);
+
+    layout->addWidget(button, row, col);
+
+    return button;
+}
+
+void HomeScreen::allDevicesButtons()
+{
+    // Create a widget to hold the secondary grid layout
+    QWidget *smallButtonsWidget = new QWidget;
+
+    QSize smallButtonSize(220, 220);
+    QSize largeButtonSize(450, 450);
 
     QString buttonStyle = QString("background-color: rgba(27,33,52,200);"
                                   "color: white;"
@@ -289,37 +295,19 @@ void HomeScreen::allDevicesButtons()
                                           "color: white;"
                                           "border-radius: 5px;");
 
-    QSize smallButtonSize(220, 220);
-    QSize largeButtonSize(450, 450);
+    // Create a secondary grid layout for smaller buttons
+    QGridLayout *smallButtonsLayout = new QGridLayout;
 
-    // Small buttons
-    getUpButton->setFixedSize(smallButtonSize);
-    leaveButton->setFixedSize(smallButtonSize);
-    atHomeButton->setFixedSize(smallButtonSize);
-    sleepButton->setFixedSize(smallButtonSize);
+    // Create the small buttons
+    getUpButton = setUpButton("Get Up", smallButtonSize, buttonStyle, 0, 0, smallButtonsLayout);
+    leaveButton = setUpButton("Leave", smallButtonSize, buttonStyle, 0, 1, smallButtonsLayout);
+    atHomeButton = setUpButton("Home", smallButtonSize, selectedButtonStyle, 1, 0, smallButtonsLayout);
+    sleepButton = setUpButton("Sleep", smallButtonSize, buttonStyle, 1, 1, smallButtonsLayout);
 
-    // Large buttons
-    networkButton->setFixedSize(largeButtonSize);
-    lightsButton->setFixedSize(largeButtonSize);
-    thermostatButton->setFixedSize(largeButtonSize);
-
-    // Small buttons
-    getUpButton->setStyleSheet(buttonStyle);
-    getUpButton->setFont(buttonFont);
-    leaveButton->setStyleSheet(buttonStyle);
-    leaveButton->setFont(buttonFont);
-    atHomeButton->setStyleSheet(selectedButtonStyle);
-    atHomeButton->setFont(buttonFont);
-    sleepButton->setStyleSheet(buttonStyle);
-    sleepButton->setFont(buttonFont);
-
-    // Lagre buttons
-    networkButton->setStyleSheet(buttonStyle);
-    networkButton->setFont(buttonFont);
-    lightsButton->setStyleSheet(buttonStyle);
-    lightsButton->setFont(buttonFont);
-    thermostatButton->setStyleSheet(buttonStyle);
-    thermostatButton->setFont(buttonFont);
+    // Create the large buttons
+    networkButton = setUpButton("Network", largeButtonSize, buttonStyle, 0, 1, optionPanelLayout);
+    lightsButton = setUpButton("Lights", largeButtonSize, buttonStyle, 1, 0, optionPanelLayout);
+    thermostatButton = setUpButton("Thermostat", largeButtonSize, buttonStyle, 1, 1, optionPanelLayout);
 
     // Connect the buttons to the slot
     connect(getUpButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
@@ -327,30 +315,11 @@ void HomeScreen::allDevicesButtons()
     connect(atHomeButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
     connect(sleepButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
 
-    // Create a secondary grid layout for smaller buttons
-    QGridLayout *smallButtonsLayout = new QGridLayout;
-    smallButtonsLayout->addWidget(getUpButton, 0, 0);
-    smallButtonsLayout->addWidget(leaveButton, 0, 1);
-    smallButtonsLayout->addWidget(atHomeButton, 1, 0);
-    smallButtonsLayout->addWidget(sleepButton, 1, 1);
-
     smallButtonsLayout->setSpacing(10);
-
-    // Align small buttons to the outer edges of their container
-    smallButtonsLayout->setAlignment(getUpButton, Qt::AlignLeft | Qt::AlignTop);
-    smallButtonsLayout->setAlignment(leaveButton, Qt::AlignRight | Qt::AlignTop);
-    smallButtonsLayout->setAlignment(atHomeButton, Qt::AlignLeft | Qt::AlignBottom);
-    smallButtonsLayout->setAlignment(sleepButton, Qt::AlignRight | Qt::AlignBottom);
-
     smallButtonsLayout->setContentsMargins(0, 0, 0, 0);
-
-    // Add the buttons to the grid layout
-    optionPanelLayout->addWidget(smallButtonsWidget, 0, 0);
-    optionPanelLayout->addWidget(networkButton, 0, 1);
-    optionPanelLayout->addWidget(lightsButton, 1, 0);
-    optionPanelLayout->addWidget(thermostatButton, 1, 1);
-
     smallButtonsWidget->setLayout(smallButtonsLayout);
+
+    optionPanelLayout->addWidget(smallButtonsWidget, 0, 0);
 
     currentOptionButton = atHomeButton;
 }
@@ -360,102 +329,35 @@ void HomeScreen::pcButtons()
     // Create a widget to hold the secondary grid layout
     QWidget *smallButtonsWidget = new QWidget;
 
-    // Create the small buttons
-    QPushButton *shutDownButton = new QPushButton("Shut Down");
-    QPushButton *restartButton = new QPushButton("Restart");
-    QPushButton *sleepButton = new QPushButton("Sleep");
-    QPushButton *lockButton = new QPushButton("Lock");
-
-    // Create the large buttons
-    QPushButton *networkButton = new QPushButton("Wi-FI");
-    QPushButton *lightsButton = new QPushButton("LEDs");
-    QPushButton *securityButton = new QPushButton("Security");
-    QPushButton *remoteButton = new QPushButton("Remote");
-    QPushButton *systemButton = new QPushButton("System");
-
-    QFont buttonFont;
-    buttonFont.setPointSize(16);
-    buttonFont.setFamily("Arial");
-    buttonFont.setBold(true);
+    QSize smallButtonSize(220, 220);
+    QSize largeButtonSize(450, 450);
 
     QString buttonStyle = QString("background-color: rgba(27,33,52,200);"
                                   "color: white;"
                                   "border-radius: 5px;");
 
-    // QString selectedButtonStyle = QString("background-color: rgba(58,94,171,255);"
-    //                                       "color: white;"
-    //                                       "border-radius: 5px;");
-
-    QSize smallButtonSize(220, 220);
-    QSize largeButtonSize(450, 450);
-
-    // Small buttons
-    shutDownButton->setFixedSize(smallButtonSize);
-    restartButton->setFixedSize(smallButtonSize);
-    sleepButton->setFixedSize(smallButtonSize);
-    lockButton->setFixedSize(smallButtonSize);
-
-    // Large buttons
-    networkButton->setFixedSize(largeButtonSize);
-    lightsButton->setFixedSize(largeButtonSize);
-    securityButton->setFixedSize(largeButtonSize);
-    remoteButton->setFixedSize(largeButtonSize);
-    systemButton->setFixedSize(largeButtonSize);
-
-    // Small buttons
-    shutDownButton->setStyleSheet(buttonStyle);
-    shutDownButton->setFont(buttonFont);
-    restartButton->setStyleSheet(buttonStyle);
-    restartButton->setFont(buttonFont);
-    sleepButton->setStyleSheet(buttonStyle);
-    sleepButton->setFont(buttonFont);
-    lockButton->setStyleSheet(buttonStyle);
-    lockButton->setFont(buttonFont);
-
-    // Lagre buttons
-    networkButton->setStyleSheet(buttonStyle);
-    networkButton->setFont(buttonFont);
-    lightsButton->setStyleSheet(buttonStyle);
-    lightsButton->setFont(buttonFont);
-    securityButton->setStyleSheet(buttonStyle);
-    securityButton->setFont(buttonFont);
-    remoteButton->setStyleSheet(buttonStyle);
-    remoteButton->setFont(buttonFont);
-    systemButton->setStyleSheet(buttonStyle);
-    systemButton->setFont(buttonFont);
-
-    // // Connect the buttons to the slot
-    // connect(shutDownButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
-    // connect(restartButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
-    // connect(sleepButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
-    // connect(lockButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
-
     // Create a secondary grid layout for smaller buttons
     QGridLayout *smallButtonsLayout = new QGridLayout;
-    smallButtonsLayout->addWidget(shutDownButton, 0, 0);
-    smallButtonsLayout->addWidget(restartButton, 0, 1);
-    smallButtonsLayout->addWidget(sleepButton, 1, 0);
-    smallButtonsLayout->addWidget(lockButton, 1, 1);
+
+    // Create the small buttons
+    shutDownButton = setUpButton("Shut Down", smallButtonSize, buttonStyle, 0, 0, smallButtonsLayout);
+    restartButton = setUpButton("Restart", smallButtonSize, buttonStyle, 0, 1, smallButtonsLayout);
+    sleepButton = setUpButton("Sleep", smallButtonSize, buttonStyle, 1, 0, smallButtonsLayout);
+    lockButton = setUpButton("Lock", smallButtonSize, buttonStyle, 1, 1, smallButtonsLayout);
+
+    // Create the large buttons
+    networkButton = setUpButton("WI-FI", largeButtonSize, buttonStyle, 0, 1, optionPanelLayout);
+    lightsButton = setUpButton("LEDs", largeButtonSize, buttonStyle, 1, 0, optionPanelLayout);
+    securityButton = setUpButton("Security", largeButtonSize, buttonStyle, 1, 1, optionPanelLayout);
+    remoteButton = setUpButton("Remote", largeButtonSize, buttonStyle, 0, 2, optionPanelLayout);
+    systemButton = setUpButton("System", largeButtonSize, buttonStyle, 1, 2, optionPanelLayout);
 
     smallButtonsLayout->setSpacing(10);
-
-    // Align small buttons to the outer edges of their container
-    smallButtonsLayout->setAlignment(shutDownButton, Qt::AlignLeft | Qt::AlignTop);
-    smallButtonsLayout->setAlignment(restartButton, Qt::AlignRight | Qt::AlignTop);
-    smallButtonsLayout->setAlignment(sleepButton, Qt::AlignLeft | Qt::AlignBottom);
-    smallButtonsLayout->setAlignment(lockButton, Qt::AlignRight | Qt::AlignBottom);
-
     smallButtonsLayout->setContentsMargins(0, 0, 0, 0);
+    smallButtonsWidget->setLayout(smallButtonsLayout);
 
     // Add the buttons to the grid layout
     optionPanelLayout->addWidget(smallButtonsWidget, 0, 0);
-    optionPanelLayout->addWidget(networkButton, 0, 1);
-    optionPanelLayout->addWidget(lightsButton, 1, 0);
-    optionPanelLayout->addWidget(securityButton, 1, 1);
-    optionPanelLayout->addWidget(remoteButton, 0, 2);
-    optionPanelLayout->addWidget(systemButton, 1, 2);
-
-    smallButtonsWidget->setLayout(smallButtonsLayout);
 }
 
 void HomeScreen::optionButtonClicked()

@@ -49,11 +49,28 @@ private:
     QPushButton *bedroomButton;
     QPushButton *homeButton;
 
+    QPushButton* setUpButton(const QString &text, const QSize &size, const QString &style, int row, int col, QGridLayout *layout);
+
     QHBoxLayout *areaPanelLayout;
     QGridLayout *optionPanelLayout;
 
     QPushButton *currentAreaButton;
     QPushButton *currentOptionButton;
+
+    // Member variables for buttons
+    QPushButton *getUpButton;
+    QPushButton *leaveButton;
+    QPushButton *atHomeButton;
+    QPushButton *sleepButton;
+    QPushButton *networkButton;
+    QPushButton *lightsButton;
+    QPushButton *thermostatButton;
+    QPushButton *shutDownButton;
+    QPushButton *restartButton;
+    QPushButton *lockButton;
+    QPushButton *securityButton;
+    QPushButton *remoteButton;
+    QPushButton *systemButton;
 };
 
 #endif // HOMESCREEN_H
