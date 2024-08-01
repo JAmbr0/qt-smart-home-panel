@@ -24,7 +24,7 @@ private slots:
     void updateTime();
     void areaButtonClicked();
     void statusButtonClicked();
-    void optionButtonClicked();
+    void itemButtonClicked();
 
     void handleShutDown();
     void handleRestart();
@@ -36,18 +36,18 @@ private:
     void geometry();
     void setUpTopPanel();
     void setUpAreaPanel();
-    void setUpOptionPanel();
-    void setUpInfoPanel();
+    void setUpitemPanel();
+    void setUpWeatherPanel();
     void allDevicesButtons();
     void pcButtons();
-    void updateInfoPanel(const QString &title, const QString &info);
+    void updateWeatherPanel(const QString &condition, const QString &temperature, const QString &feelsliketemperature);
     void adjustFontSizes();
 
     QWidget *centralWidget;
     QWidget *topPanel;
     QWidget *areaPanel;
-    QWidget *optionPanel;
-    QWidget *infoPanel;
+    QWidget *itemPanel;
+    QWidget *weatherPanel;
 
     QLabel *titleLabel;
     QLabel *timeLabel;
@@ -62,14 +62,13 @@ private:
     QPushButton* setUpButton(const QString &text, const QSize &size, const QString &style, int row, int col, QGridLayout *layout);
 
     QHBoxLayout *areaPanelLayout;
-    QGridLayout *optionPanelLayout;
-    QVBoxLayout *infoPanelLayout;
+    QGridLayout *itemPanelLayout;
+    QVBoxLayout *weatherPanelLayout;
 
     QPushButton *currentAreaButton;
     QPushButton *currentStatusButton;
-    QPushButton *currentOptionButton;
+    QPushButton *currentItemButton;
 
-    // Member variables for buttons
     QPushButton *getUpButton;
     QPushButton *leaveButton;
     QPushButton *atHomeButton;
@@ -84,8 +83,9 @@ private:
     QPushButton *remoteButton;
     QPushButton *systemButton;
 
-    QLabel *infoTitleLabel;
-    QLabel *infoLabel;
+    QLabel *weatherConditionLabel;
+    QLabel *weatherTemperatureLabel;
+    QLabel *weatherFeelsLikeTemperatureLabel;
 };
 
 #endif // HOMESCREEN_H

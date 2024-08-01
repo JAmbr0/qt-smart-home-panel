@@ -6,7 +6,7 @@
 #include <QNetworkInterface>
 
 HomeScreen::HomeScreen(QWidget *parent)
-    : QMainWindow(parent), timer(new QTimer(this)), currentAreaButton(nullptr), currentOptionButton(nullptr)
+    : QMainWindow(parent), timer(new QTimer(this)), currentAreaButton(nullptr), currentItemButton(nullptr)
 {
     // Create the central widget
     centralWidget = new QWidget(this);
@@ -18,8 +18,8 @@ HomeScreen::HomeScreen(QWidget *parent)
     // Add panels
     setUpTopPanel();
     setUpAreaPanel();
-    setUpOptionPanel();
-    setUpInfoPanel();
+    setUpitemPanel();
+    setUpWeatherPanel();
 
     // Connect the timer to the updateTime slot
     connect(timer, &QTimer::timeout, this, &HomeScreen::updateTime);
@@ -86,15 +86,15 @@ void HomeScreen::geometry()
     areaPanel->setFixedHeight(100);
 
     // Option panel
-    optionPanel->setGeometry(windowWidth / 2.5,
+    itemPanel->setGeometry(windowWidth / 2.5,
                              areaPanel->height() + topPanel->height(),
                              windowWidth,
                              windowHeight - areaPanel->height() - topPanel->height() - 50);
 
-    // Info panel
-    infoPanel->setGeometry(5,
+    // Weather panel
+    weatherPanel->setGeometry(50,
                            areaPanel->height() + topPanel->height() + 50,
-                           windowWidth / 3,
+                           windowWidth / 5,
                            windowHeight - areaPanel->height() - topPanel->height() - 150);
 }
 
@@ -104,7 +104,7 @@ void HomeScreen::setUpTopPanel()
     topPanel->setStyleSheet("background-color: transparent;");
 
     // Add top panel title
-    titleLabel = new QLabel("Control Hub", topPanel);
+    titleLabel = new QLabel("Control Panel", topPanel);
     titleLabel->setStyleSheet("background-color: transparent; color: white;");
     titleLabel->setAlignment(Qt::AlignCenter);
 
@@ -213,46 +213,57 @@ void HomeScreen::setUpAreaPanel()
     currentAreaButton = allDevicesButton;
 }
 
-void HomeScreen::setUpInfoPanel()
+void HomeScreen::setUpWeatherPanel()
 {
-    infoPanel = new QWidget(centralWidget);
-    infoPanel->setStyleSheet("background-color: rgba(27,33,52,200);"
-                             "border-radius: 30;");
+    weatherPanel = new QWidget(centralWidget);
+    weatherPanel->setStyleSheet("background-color: rgba(27,33,52,200);"
+                             "border-radius: 100;");
 
-    QFont titleFont;
-    titleFont.setPointSize(30);
-    titleFont.setFamily("Arial");
-    titleFont.setBold(true);
+    QFont weatherConditionFont;
+    weatherConditionFont.setPointSize(30);
+    weatherConditionFont.setFamily("Arial");
+    weatherConditionFont.setBold(true);
 
-    QFont textFont;
-    textFont.setPointSize(20);
-    textFont.setFamily("Arial");
-    textFont.setBold(true);
+    QFont weatherTemperatureFont;
+    weatherTemperatureFont.setPointSize(60);
+    weatherTemperatureFont.setFamily("Arial");
+    weatherTemperatureFont.setBold(true);
 
-    infoPanelLayout = new QVBoxLayout(infoPanel);
+    QFont weatherFeelsLikeTemperatureFont;
+    weatherFeelsLikeTemperatureFont.setPointSize(20);
+    weatherFeelsLikeTemperatureFont.setFamily("Arial");
+    weatherFeelsLikeTemperatureFont.setBold(false);
 
-    infoTitleLabel = new QLabel(infoPanel);
-    infoTitleLabel->setFont(titleFont);
-    infoTitleLabel->setStyleSheet("color: white;");
+    weatherPanelLayout = new QVBoxLayout(weatherPanel);
 
-    infoLabel = new QLabel(infoPanel);
-    infoLabel->setFont(textFont);
-    infoLabel->setStyleSheet("color: white;");
+    weatherConditionLabel = new QLabel("Clear", weatherPanel);
+    weatherConditionLabel->setFont(weatherConditionFont);
+    weatherConditionLabel->setStyleSheet("background-color: transparent; color: white;");
 
-    infoPanelLayout->addSpacing(15);
-    infoPanelLayout->addWidget(infoTitleLabel);
-    infoPanelLayout->addSpacing(30);
-    infoPanelLayout->addWidget(infoLabel);
-    infoPanelLayout->setContentsMargins(25, 0, 0, 0);
+    weatherTemperatureLabel = new QLabel("18°C", weatherPanel);
+    weatherTemperatureLabel->setFont(weatherTemperatureFont);
+    weatherTemperatureLabel->setStyleSheet("background-color: transparent; color: white;");
 
-    infoPanel->setLayout(infoPanelLayout);
-    infoPanelLayout->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+    weatherFeelsLikeTemperatureLabel = new QLabel("Feels like: 19°C", weatherPanel);
+    weatherFeelsLikeTemperatureLabel->setFont(weatherFeelsLikeTemperatureFont);
+    weatherFeelsLikeTemperatureLabel->setStyleSheet("background-color: transparent; color: white;");
+
+    weatherPanelLayout->addWidget(weatherConditionLabel);
+    weatherPanelLayout->addSpacing(30);
+    weatherPanelLayout->addWidget(weatherTemperatureLabel);
+    weatherPanelLayout->addSpacing(30);
+    weatherPanelLayout->addWidget(weatherFeelsLikeTemperatureLabel);
+    weatherPanelLayout->setContentsMargins(0, 0, 0, 0);
+
+    weatherPanel->setLayout(weatherPanelLayout);
+    weatherPanelLayout->setAlignment(Qt::AlignCenter);
 }
 
-void HomeScreen::updateInfoPanel(const QString &title, const QString &info)
+void HomeScreen::updateWeatherPanel(const QString &condition, const QString &temperature, const QString &feelsliketemperature)
 {
-    infoTitleLabel->setText(title);
-    infoLabel->setText(info);
+    weatherConditionLabel->setText(condition);
+    weatherTemperatureLabel->setText(temperature);
+    weatherFeelsLikeTemperatureLabel->setText(feelsliketemperature);
 }
 
 void HomeScreen::areaButtonClicked()
@@ -279,14 +290,14 @@ void HomeScreen::areaButtonClicked()
     // Clear the current option panel layout before showing the new one
     // TODO: understand this
     QLayoutItem *child;
-    while ((child = optionPanelLayout->takeAt(0)) != 0)
+    while ((child = itemPanelLayout->takeAt(0)) != 0)
     {
         delete child->widget();
         delete child;
     }
 
-    // reset the current option button when switching options (prevents crash)
-    currentOptionButton = nullptr;
+    // Reset the current option button when changing options (prevents crash)
+    currentItemButton = nullptr;
 
     // Update the option panel based on the selected area button
     if (clickedAreaButton == allDevicesButton)
@@ -299,22 +310,22 @@ void HomeScreen::areaButtonClicked()
     }
 }
 
-void HomeScreen::setUpOptionPanel()
+void HomeScreen::setUpitemPanel()
 {
-    optionPanel = new QWidget(centralWidget);
-    optionPanel->setStyleSheet("background-color: transparent;");
+    itemPanel = new QWidget(centralWidget);
+    itemPanel->setStyleSheet("background-color: transparent;");
 
     // Create a grid layout
-    optionPanelLayout = new QGridLayout(optionPanel);
+    itemPanelLayout = new QGridLayout(itemPanel);
 
-    optionPanelLayout->setSpacing(10);
+    itemPanelLayout->setSpacing(10);
 
     // Call the function to set up the all devices buttons
     allDevicesButtons();
 
     // Set the grid layout for the option panel
-    optionPanel->setLayout(optionPanelLayout);
-    optionPanelLayout->setAlignment(Qt::AlignLeft | Qt::AlignCenter);
+    itemPanel->setLayout(itemPanelLayout);
+    itemPanelLayout->setAlignment(Qt::AlignLeft | Qt::AlignCenter);
 }
 
 QPushButton* HomeScreen::setUpButton(const QString &text, const QSize &size, const QString &style, int row, int col, QGridLayout *layout)
@@ -360,9 +371,9 @@ void HomeScreen::allDevicesButtons()
     sleepButton = setUpButton("Sleep", smallButtonSize, buttonStyle, 1, 1, smallButtonsLayout);
 
     // Create the large buttons
-    networkButton = setUpButton("Network", largeButtonSize, buttonStyle, 0, 1, optionPanelLayout);
-    lightsButton = setUpButton("Lights", largeButtonSize, buttonStyle, 1, 0, optionPanelLayout);
-    thermostatButton = setUpButton("Thermostat", largeButtonSize, buttonStyle, 1, 1, optionPanelLayout);
+    networkButton = setUpButton("Network", largeButtonSize, buttonStyle, 0, 1, itemPanelLayout);
+    lightsButton = setUpButton("Lights", largeButtonSize, buttonStyle, 1, 0, itemPanelLayout);
+    thermostatButton = setUpButton("Thermostat", largeButtonSize, buttonStyle, 1, 1, itemPanelLayout);
 
     // Connect the small buttons to their slot
     connect(getUpButton, &QPushButton::clicked, this, &HomeScreen::statusButtonClicked);
@@ -371,15 +382,15 @@ void HomeScreen::allDevicesButtons()
     connect(sleepButton, &QPushButton::clicked, this, &HomeScreen::statusButtonClicked);
 
     // Connect the large buttons to their slot
-    connect(networkButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
-    connect(lightsButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
-    connect(thermostatButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
+    connect(networkButton, &QPushButton::clicked, this, &HomeScreen::itemButtonClicked);
+    connect(lightsButton, &QPushButton::clicked, this, &HomeScreen::itemButtonClicked);
+    connect(thermostatButton, &QPushButton::clicked, this, &HomeScreen::itemButtonClicked);
 
     smallButtonsLayout->setSpacing(10);
     smallButtonsLayout->setContentsMargins(0, 0, 0, 0);
     smallButtonsWidget->setLayout(smallButtonsLayout);
 
-    optionPanelLayout->addWidget(smallButtonsWidget, 0, 0);
+    itemPanelLayout->addWidget(smallButtonsWidget, 0, 0);
 
     currentStatusButton = atHomeButton;
 }
@@ -412,24 +423,24 @@ void HomeScreen::pcButtons()
     connect(lockButton, &QPushButton::clicked, this, &HomeScreen::handleLock);
 
     // Create the large buttons
-    networkButton = setUpButton("WI-FI", largeButtonSize, buttonStyle, 0, 1, optionPanelLayout);
-    lightsButton = setUpButton("LEDs", largeButtonSize, buttonStyle, 1, 0, optionPanelLayout);
-    securityButton = setUpButton("Security", largeButtonSize, buttonStyle, 1, 1, optionPanelLayout);
-    remoteButton = setUpButton("Remote", largeButtonSize, buttonStyle, 0, 2, optionPanelLayout);
-    systemButton = setUpButton("System", largeButtonSize, buttonStyle, 1, 2, optionPanelLayout);
+    networkButton = setUpButton("WI-FI", largeButtonSize, buttonStyle, 0, 1, itemPanelLayout);
+    lightsButton = setUpButton("LEDs", largeButtonSize, buttonStyle, 1, 0, itemPanelLayout);
+    securityButton = setUpButton("Security", largeButtonSize, buttonStyle, 1, 1, itemPanelLayout);
+    remoteButton = setUpButton("Remote", largeButtonSize, buttonStyle, 0, 2, itemPanelLayout);
+    systemButton = setUpButton("System", largeButtonSize, buttonStyle, 1, 2, itemPanelLayout);
 
-    connect(networkButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
-    connect(lightsButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
-    connect(securityButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
-    connect(remoteButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
-    connect(systemButton, &QPushButton::clicked, this, &HomeScreen::optionButtonClicked);
+    connect(networkButton, &QPushButton::clicked, this, &HomeScreen::itemButtonClicked);
+    connect(lightsButton, &QPushButton::clicked, this, &HomeScreen::itemButtonClicked);
+    connect(securityButton, &QPushButton::clicked, this, &HomeScreen::itemButtonClicked);
+    connect(remoteButton, &QPushButton::clicked, this, &HomeScreen::itemButtonClicked);
+    connect(systemButton, &QPushButton::clicked, this, &HomeScreen::itemButtonClicked);
 
     smallButtonsLayout->setSpacing(10);
     smallButtonsLayout->setContentsMargins(0, 0, 0, 0);
     smallButtonsWidget->setLayout(smallButtonsLayout);
 
     // Add the buttons to the grid layout
-    optionPanelLayout->addWidget(smallButtonsWidget, 0, 0);
+    itemPanelLayout->addWidget(smallButtonsWidget, 0, 0);
 }
 
 void HomeScreen::handleShutDown()
@@ -453,31 +464,30 @@ void HomeScreen::handleLock()
 
 void HomeScreen::handleWiFiDetails()
 {
-    // A list of example Wi-Fi details
-    QStringList wifiDetailsList = {
-        "SSID: ExampleNetwork1",
-        "BSSID: AA:BB:CC:DD:EE:FF",
-        "Mode: Infrastructure",
-        "Channel: 6",
-        "Rate: 54 Mbit/s",
-        "Signal: 70",
-        "Device: wlan0",
-        "",
-        "SSID: ExampleNetwork2",
-        "BSSID: 11:22:33:44:55:66",
-        "Mode: Infrastructure",
-        "Channel: 11",
-        "Rate: 150 Mbit/s",
-        "Signal: 80",
-        "Device: wlan1"
-    };
+    // // A list of example Wi-Fi details
+    // QStringList wifiDetailsList = {
+    //     "SSID: ExampleNetwork1",
+    //     "BSSID: AA:BB:CC:DD:EE:FF",
+    //     "Mode: Infrastructure",
+    //     "Channel: 6",
+    //     "Rate: 54 Mbit/s",
+    //     "Signal: 70",
+    //     "Device: wlan0",
+    //     "",
+    //     "SSID: ExampleNetwork2",
+    //     "BSSID: 11:22:33:44:55:66",
+    //     "Mode: Infrastructure",
+    //     "Channel: 11",
+    //     "Rate: 150 Mbit/s",
+    //     "Signal: 80",
+    //     "Device: wlan1"
+    // };
 
-    // Join the list into a single string
-    QString wifiDetails = wifiDetailsList.join("\n");
+    // // Join the list into a single string
+    // QString wifiDetails = wifiDetailsList.join("\n");
 
-    // Display Wi-Fi details in a message box
-    QString title = "Network";
-    updateInfoPanel(title, wifiDetails);
+    // // Display Wi-Fi details in a message box
+    // QString title = "Network";
 }
 
 void HomeScreen::statusButtonClicked()
@@ -501,57 +511,57 @@ void HomeScreen::statusButtonClicked()
     // Update the current button
     currentStatusButton = clickedStatusButton;
 
-    // Display info based on the clicked button
-    if (clickedStatusButton == getUpButton) {
-        updateInfoPanel("Get Up", "Get up and start your day.");
-    } else if (clickedStatusButton == leaveButton) {
-        updateInfoPanel("Leave", "You are leaving the house.");
-    } else if (clickedStatusButton == atHomeButton) {
-        updateInfoPanel("Home", "You are at home.");
-    } else if (clickedStatusButton == sleepButton) {
-        updateInfoPanel("Sleep", "Time to go to sleep.");
-    }
+    // // Display info based on the clicked button
+    // if (clickedStatusButton == getUpButton) {
+    //     updateWeatherPanel("Get Up", "Get up and start your day.", false, "");
+    // } else if (clickedStatusButton == leaveButton) {
+    //     updateWeatherPanel("Leave", "You are leaving the house.", false, "");
+    // } else if (clickedStatusButton == atHomeButton) {
+    //     updateWeatherPanel("Home", "You are at home.",false, "");
+    // } else if (clickedStatusButton == sleepButton) {
+    //     updateWeatherPanel("Sleep", "Time to go to sleep.", true, "Alarm:");
+    // }
 }
 
-void HomeScreen::optionButtonClicked()
+void HomeScreen::itemButtonClicked()
 {
     // Get the button that was clicked
-    QPushButton *clickedOptionButton = qobject_cast<QPushButton*>(sender());
+    QPushButton *clickedItemButton = qobject_cast<QPushButton*>(sender());
 
     // Check if the clicked button is different from the current option button
-    if (currentOptionButton && currentOptionButton != clickedOptionButton)
+    if (currentItemButton && currentItemButton != clickedItemButton)
     {
         // Reset the style of the previously selected button
-        currentOptionButton->setStyleSheet("background-color: rgba(27,33,52,200);"
+        currentItemButton->setStyleSheet("background-color: rgba(27,33,52,200);"
                                            "color: white;"
                                            "border-radius: 5px;");
 
         // Reset the info panel when the option button changes
-        QString title = "Information";
-        QString info = "Select an option to see details.";
-        updateInfoPanel(title, info);
+        // QString title = "Information";
+        // QString info = "Select an option to see details.";
+        // updateWeatherPanel(title, info, false, "");
     }
 
     // Set the style of the clicked button to indicate its selection
-    clickedOptionButton->setStyleSheet("background-color: rgba(58,94,171,255);"
+    clickedItemButton->setStyleSheet("background-color: rgba(58,94,171,255);"
                                        "color: white;"
                                        "border-radius: 5px;");
 
     // Update the current button
-    currentOptionButton = clickedOptionButton;
+    currentItemButton = clickedItemButton;
 
-    // Display info based on the clicked button
-    if (clickedOptionButton == networkButton) {
-        handleWiFiDetails();
-    } else if (clickedOptionButton == lightsButton) {
-        updateInfoPanel("Lights", "Control your home lighting system.");
-    } else if (clickedOptionButton == thermostatButton) {
-        updateInfoPanel("Thermostat", "Adjust the temperature settings.");
-    } else if (clickedOptionButton == securityButton) {
-        updateInfoPanel("Security", "Manage your home security settings.");
-    } else if (clickedOptionButton == remoteButton) {
-        updateInfoPanel("Remote", "Access and control remote devices.");
-    } else if (clickedOptionButton == systemButton) {
-        updateInfoPanel("System", "View and manage system settings.");
-    }
+    // // Display options based on the clicked button
+    // if (clickedItemButton == networkButton) {
+    //     handleWiFiDetails();
+    // } else if (clickedItemButton == lightsButton) {
+    //     updateWeatherPanel("Lights", "Control your home lighting system.", false, "");
+    // } else if (clickedItemButton == thermostatButton) {
+    //     updateWeatherPanel("Thermostat", "Adjust the temperature settings.", false, "");
+    // } else if (clickedItemButton == securityButton) {
+    //     updateWeatherPanel("Security", "Manage your home security settings.", false, "");
+    // } else if (clickedItemButton == remoteButton) {
+    //     updateWeatherPanel("Remote", "Access and control remote devices.", false, "");
+    // } else if (clickedItemButton == systemButton) {
+    //     updateWeatherPanel("System", "View and manage system settings.", false, "");
+    // }
 }
