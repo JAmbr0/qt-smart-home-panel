@@ -1,6 +1,7 @@
 #ifndef HOMESCREEN_H
 #define HOMESCREEN_H
 
+#include "NetworkControls.h"
 #include <QMainWindow>
 #include <QWidget>
 #include <QLabel>
@@ -20,6 +21,8 @@ public:
 protected:
     void resizeEvent(QResizeEvent *event) override;
 
+    bool eventFilter(QObject *watched, QEvent *event) override;
+
 private slots:
     void updateTime();
     void areaButtonClicked();
@@ -30,14 +33,15 @@ private slots:
     void handleRestart();
     void handleSleep();
     void handleLock();
-    void handleWiFiDetails();
 
 private:
     void geometry();
     void setUpTopPanel();
     void setUpAreaPanel();
-    void setUpitemPanel();
+    void setUpItemPanel();
     void setUpWeatherPanel();
+    void setUpOptionPanel();
+    void clearOptionPanelLayout();
     void allDevicesButtons();
     void pcButtons();
     void updateWeatherPanel(const QString &condition, const QString &temperature, const QString &feelsliketemperature);
@@ -48,6 +52,7 @@ private:
     QWidget *areaPanel;
     QWidget *itemPanel;
     QWidget *weatherPanel;
+    QWidget *optionPanel;
 
     QLabel *titleLabel;
     QLabel *timeLabel;
@@ -64,6 +69,7 @@ private:
     QHBoxLayout *areaPanelLayout;
     QGridLayout *itemPanelLayout;
     QVBoxLayout *weatherPanelLayout;
+    QVBoxLayout *optionPanelLayout;
 
     QPushButton *currentAreaButton;
     QPushButton *currentStatusButton;
@@ -86,6 +92,8 @@ private:
     QLabel *weatherConditionLabel;
     QLabel *weatherTemperatureLabel;
     QLabel *weatherFeelsLikeTemperatureLabel;
+
+    NetworkControls *networkControls;
 };
 
 #endif // HOMESCREEN_H

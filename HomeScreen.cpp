@@ -1,12 +1,20 @@
 #include "HomeScreen.h"
+#include "NetworkControls.h"
 #include <QTime>
 #include <QDate>
 #include <QProcess>
 #include <QMessageBox>
 #include <QNetworkInterface>
+#include <QMouseEvent>
+
+NetworkControls *networkControls;
 
 HomeScreen::HomeScreen(QWidget *parent)
-    : QMainWindow(parent), timer(new QTimer(this)), currentAreaButton(nullptr), currentItemButton(nullptr)
+    : QMainWindow(parent),
+    timer(new QTimer(this)),
+    currentAreaButton(nullptr),
+    currentItemButton(nullptr),
+    networkControls(new NetworkControls(this))
 {
     // Create the central widget
     centralWidget = new QWidget(this);
@@ -18,8 +26,9 @@ HomeScreen::HomeScreen(QWidget *parent)
     // Add panels
     setUpTopPanel();
     setUpAreaPanel();
-    setUpitemPanel();
+    setUpItemPanel();
     setUpWeatherPanel();
+    setUpOptionPanel();
 
     // Connect the timer to the updateTime slot
     connect(timer, &QTimer::timeout, this, &HomeScreen::updateTime);
@@ -96,6 +105,12 @@ void HomeScreen::geometry()
                            areaPanel->height() + topPanel->height() + 50,
                            windowWidth / 5,
                            windowHeight - areaPanel->height() - topPanel->height() - 150);
+
+    // Option panel
+    optionPanel->setGeometry(0,
+                             topPanel->height() + areaPanel->height() + 50,
+                             windowWidth,
+                             windowHeight - areaPanel->height() - topPanel->height() - 50);
 }
 
 void HomeScreen::setUpTopPanel()
@@ -259,6 +274,34 @@ void HomeScreen::setUpWeatherPanel()
     weatherPanelLayout->setAlignment(Qt::AlignCenter);
 }
 
+void HomeScreen::setUpOptionPanel()
+{
+    optionPanel = new QWidget(centralWidget);
+    optionPanel->setStyleSheet("background-color: rgba(5,10,30,255);"
+                               "border-radius: 60px");
+
+    // Create a layout for the option panel
+    optionPanelLayout = new QVBoxLayout(optionPanel);
+    optionPanel->setLayout(optionPanelLayout);
+
+    qApp->installEventFilter(this);
+    optionPanel->hide();
+}
+
+void HomeScreen::clearOptionPanelLayout()
+{
+    QLayoutItem *child;
+    while ((child = optionPanelLayout->takeAt(0)) != nullptr)
+    {
+        if (child->widget())
+        {
+            child->widget()->setParent(nullptr); // Detach from parent
+            child->widget()->deleteLater(); // Schedule the widget for deletion
+        }
+        delete child; // Delete the layout item
+    }
+}
+
 void HomeScreen::updateWeatherPanel(const QString &condition, const QString &temperature, const QString &feelsliketemperature)
 {
     weatherConditionLabel->setText(condition);
@@ -310,7 +353,7 @@ void HomeScreen::areaButtonClicked()
     }
 }
 
-void HomeScreen::setUpitemPanel()
+void HomeScreen::setUpItemPanel()
 {
     itemPanel = new QWidget(centralWidget);
     itemPanel->setStyleSheet("background-color: transparent;");
@@ -462,34 +505,6 @@ void HomeScreen::handleLock()
     QProcess::startDetached("xfce4-session-logout", QStringList() << "--logout");
 }
 
-void HomeScreen::handleWiFiDetails()
-{
-    // // A list of example Wi-Fi details
-    // QStringList wifiDetailsList = {
-    //     "SSID: ExampleNetwork1",
-    //     "BSSID: AA:BB:CC:DD:EE:FF",
-    //     "Mode: Infrastructure",
-    //     "Channel: 6",
-    //     "Rate: 54 Mbit/s",
-    //     "Signal: 70",
-    //     "Device: wlan0",
-    //     "",
-    //     "SSID: ExampleNetwork2",
-    //     "BSSID: 11:22:33:44:55:66",
-    //     "Mode: Infrastructure",
-    //     "Channel: 11",
-    //     "Rate: 150 Mbit/s",
-    //     "Signal: 80",
-    //     "Device: wlan1"
-    // };
-
-    // // Join the list into a single string
-    // QString wifiDetails = wifiDetailsList.join("\n");
-
-    // // Display Wi-Fi details in a message box
-    // QString title = "Network";
-}
-
 void HomeScreen::statusButtonClicked()
 {
     // Get the button that was clicked
@@ -533,35 +548,41 @@ void HomeScreen::itemButtonClicked()
     {
         // Reset the style of the previously selected button
         currentItemButton->setStyleSheet("background-color: rgba(27,33,52,200);"
-                                           "color: white;"
-                                           "border-radius: 5px;");
-
-        // Reset the info panel when the option button changes
-        // QString title = "Information";
-        // QString info = "Select an option to see details.";
-        // updateWeatherPanel(title, info, false, "");
+                                         "color: white;"
+                                         "border-radius: 5px;");
     }
 
     // Set the style of the clicked button to indicate its selection
     clickedItemButton->setStyleSheet("background-color: rgba(58,94,171,255);"
-                                       "color: white;"
-                                       "border-radius: 5px;");
+                                     "color: white;"
+                                     "border-radius: 5px;");
 
     // Update the current button
     currentItemButton = clickedItemButton;
 
-    // // Display options based on the clicked button
-    // if (clickedItemButton == networkButton) {
-    //     handleWiFiDetails();
-    // } else if (clickedItemButton == lightsButton) {
-    //     updateWeatherPanel("Lights", "Control your home lighting system.", false, "");
-    // } else if (clickedItemButton == thermostatButton) {
-    //     updateWeatherPanel("Thermostat", "Adjust the temperature settings.", false, "");
-    // } else if (clickedItemButton == securityButton) {
-    //     updateWeatherPanel("Security", "Manage your home security settings.", false, "");
-    // } else if (clickedItemButton == remoteButton) {
-    //     updateWeatherPanel("Remote", "Access and control remote devices.", false, "");
-    // } else if (clickedItemButton == systemButton) {
-    //     updateWeatherPanel("System", "View and manage system settings.", false, "");
-    // }
+    // Clear the option panel layout before adding new content
+    clearOptionPanelLayout();
+
+    // Display options based on the clicked button
+    if (clickedItemButton == networkButton) {
+
+        // Create a new instance of NetworkControls each time
+        NetworkControls *networkControlsInstance = new NetworkControls(this);
+        optionPanelLayout->addWidget(networkControlsInstance);
+        networkControlsInstance->displayNetworkDetails();
+        optionPanel->show();
+    }
+}
+
+bool HomeScreen::eventFilter(QObject *watched, QEvent *event)
+{
+    if (event->type() == QEvent::MouseButtonPress)
+    {
+        QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+        if (optionPanel->isVisible() && !optionPanel->geometry().contains(mouseEvent->globalPosition().toPoint()))
+        {
+            optionPanel->hide();
+        }
+    }
+    return QMainWindow::eventFilter(watched, event);
 }
