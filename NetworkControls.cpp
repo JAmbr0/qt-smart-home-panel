@@ -1,4 +1,5 @@
 #include "NetworkControls.h"
+#include "ToggleButton.h"
 #include <QStringList>
 
 NetworkControls::NetworkControls(QWidget *parent)
@@ -18,8 +19,14 @@ NetworkControls::NetworkControls(QWidget *parent)
     titleLabel->setFont(titleFont);
     titleLabel->setStyleSheet("color: white;");
 
+    wifiToggle = new ToggleButton(this);
+    wifiToggle->setLabelText("Wi-Fi     ");
+
     optionPanelLayout->addWidget(titleLabel);
     optionPanelLayout->addSpacing(40);
+    optionPanelLayout->addWidget(wifiToggle);
+    optionPanelLayout->addSpacing(40);
+
     optionPanelLayout->setContentsMargins(25, 25, 0, 0);
 }
 

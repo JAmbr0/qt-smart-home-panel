@@ -1,6 +1,7 @@
 #ifndef NETWORKCONTROLS_H
 #define NETWORKCONTROLS_H
 
+#include "ToggleButton.h"
 #include <QWidget>
 #include <QVBoxLayout>
 #include <QLabel>
@@ -16,6 +17,10 @@ public:
 private:
     QVBoxLayout *optionPanelLayout;
     QLabel *optionPanelTitleLabel;
+
+    ToggleButton *wifiToggle;
+
+    QStringList wifiDetailsList;
 };
 
 #endif // NETWORKCONTROLS_H
