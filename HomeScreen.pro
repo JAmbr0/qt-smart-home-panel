@@ -12,11 +12,13 @@ SOURCES += \
     HomeScreen.cpp \
     Main.cpp \
     NetworkControls.cpp \
+    SecurityControls.cpp \
     ToggleButton.cpp
 
 HEADERS += \
     HomeScreen.h \
     NetworkControls.h \
+    SecurityControls.h \
     ToggleButton.h
 
 # Default rules for deployment.

@@ -2,6 +2,7 @@
 #define HOMESCREEN_H
 
 #include "NetworkControls.h"
+#include "SecurityControls.h"
 #include <QMainWindow>
 #include <QWidget>
 #include <QLabel>
@@ -94,6 +95,7 @@ private:
     QLabel *weatherFeelsLikeTemperatureLabel;
 
     NetworkControls *networkControls;
+    SecurityControls *securityControls;
 };
 
 #endif // HOMESCREEN_H

@@ -1,10 +1,12 @@
 #ifndef NETWORKCONTROLS_H
 #define NETWORKCONTROLS_H
 
-#include "ToggleButton.h"
 #include <QWidget>
 #include <QVBoxLayout>
 #include <QLabel>
+#include <QTimer>
+
+class ToggleButton;
 
 class NetworkControls : public QWidget
 {
@@ -12,15 +14,26 @@ class NetworkControls : public QWidget
 
 public:
     explicit NetworkControls(QWidget *parent = nullptr);
-    void displayNetworkDetails();
+    bool checkDependencies();
+
+    void setActive(bool active);
+
+private slots:
+    void checkWifiState();
+    void handleWifiToggle(bool enabled);
 
 private:
+    void displayNetworkDetails();
+    void updateNetworkDisplay();
+    QStringList getWifiDetails();
+
     QVBoxLayout *optionPanelLayout;
-    QLabel *optionPanelTitleLabel;
-
     ToggleButton *wifiToggle;
+    QTimer *wifiCheckTimer;
+    bool lastKnownWifiState;
 
-    QStringList wifiDetailsList;
+    QTimer *displayUpdateTimer;
+    QTimer *enableWifiTimer;
 };
 
 #endif // NETWORKCONTROLS_H

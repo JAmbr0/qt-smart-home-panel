@@ -1,5 +1,6 @@
 #include "HomeScreen.h"
 #include "NetworkControls.h"
+#include "SecurityControls.h"
 #include <QTime>
 #include <QDate>
 #include <QProcess>
@@ -8,13 +9,15 @@
 #include <QMouseEvent>
 
 NetworkControls *networkControls;
+SecurityControls *securityControls;
 
 HomeScreen::HomeScreen(QWidget *parent)
     : QMainWindow(parent),
     timer(new QTimer(this)),
     currentAreaButton(nullptr),
     currentItemButton(nullptr),
-    networkControls(new NetworkControls(this))
+    networkControls(new NetworkControls(this)),
+    securityControls(new SecurityControls(this))
 {
     // Create the central widget
     centralWidget = new QWidget(this);
@@ -295,8 +298,8 @@ void HomeScreen::clearOptionPanelLayout()
     {
         if (child->widget())
         {
-            child->widget()->setParent(nullptr); // Detach from parent
-            child->widget()->deleteLater(); // Schedule the widget for deletion
+            child->widget()->setParent(nullptr);
+            child->widget()->deleteLater();
         }
         delete child; // Delete the layout item
     }
@@ -525,17 +528,6 @@ void HomeScreen::statusButtonClicked()
 
     // Update the current button
     currentStatusButton = clickedStatusButton;
-
-    // // Display info based on the clicked button
-    // if (clickedStatusButton == getUpButton) {
-    //     updateWeatherPanel("Get Up", "Get up and start your day.", false, "");
-    // } else if (clickedStatusButton == leaveButton) {
-    //     updateWeatherPanel("Leave", "You are leaving the house.", false, "");
-    // } else if (clickedStatusButton == atHomeButton) {
-    //     updateWeatherPanel("Home", "You are at home.",false, "");
-    // } else if (clickedStatusButton == sleepButton) {
-    //     updateWeatherPanel("Sleep", "Time to go to sleep.", true, "Alarm:");
-    // }
 }
 
 void HomeScreen::itemButtonClicked()
@@ -569,8 +561,21 @@ void HomeScreen::itemButtonClicked()
         // Create a new instance of NetworkControls each time
         NetworkControls *networkControlsInstance = new NetworkControls(this);
         optionPanelLayout->addWidget(networkControlsInstance);
-        networkControlsInstance->displayNetworkDetails();
+        networkControlsInstance->setActive(true);
         optionPanel->show();
+    }
+    else if(clickedItemButton == securityButton) {
+            // Create a new instance of SecurityControls each time
+            SecurityControls *securityControlsInstance = new SecurityControls(this);
+            optionPanelLayout->addWidget(securityControlsInstance);
+            optionPanel->show();
+    }
+    else {
+        // If it's not the network button, deactivate any existing NetworkControls
+        NetworkControls *existingNetworkControls = optionPanel->findChild<NetworkControls*>();
+        if (existingNetworkControls) {
+            existingNetworkControls->setActive(false);
+        }
     }
 }
 
@@ -582,6 +587,12 @@ bool HomeScreen::eventFilter(QObject *watched, QEvent *event)
         if (optionPanel->isVisible() && !optionPanel->geometry().contains(mouseEvent->globalPosition().toPoint()))
         {
             optionPanel->hide();
+        }
+
+        // Deactivate NetworkControls when closing the panel
+        NetworkControls *existingNetworkControls = optionPanel->findChild<NetworkControls*>();
+        if (existingNetworkControls) {
+            existingNetworkControls->setActive(false);
         }
     }
     return QMainWindow::eventFilter(watched, event);
