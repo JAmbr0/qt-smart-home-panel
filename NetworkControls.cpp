@@ -67,7 +67,7 @@ void NetworkControls::displayNetworkDetails()
 
     // Clear existing network details
     QLayoutItem *child;
-    while ((child = optionPanelLayout->takeAt(3)) != nullptr) {
+    while ((child = optionPanelLayout->takeAt(4)) != nullptr) {
         delete child->widget();
         delete child;
     }
@@ -126,7 +126,7 @@ void NetworkControls::updateNetworkDisplay()
 
     // Clear existing network details
     QLayoutItem *child;
-    while ((child = optionPanelLayout->takeAt(3)) != nullptr) {
+    while ((child = optionPanelLayout->takeAt(4)) != nullptr) {
         delete child->widget();
         delete child;
     }

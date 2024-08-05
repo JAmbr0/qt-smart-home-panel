@@ -81,7 +81,7 @@ void SecurityControls::displaySecurityDetails()
 
     // Clear existing labels
     QLayoutItem *child;
-    while ((child = optionPanelLayout->takeAt(3)) != nullptr) {
+    while ((child = optionPanelLayout->takeAt(4)) != nullptr) {
         delete child->widget();
         delete child;
     }

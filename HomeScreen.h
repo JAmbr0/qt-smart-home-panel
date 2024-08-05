@@ -10,6 +10,7 @@
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QGridLayout>
+#include <QPropertyAnimation>
 
 class HomeScreen : public QMainWindow
 {
@@ -23,6 +24,10 @@ protected:
     void resizeEvent(QResizeEvent *event) override;
 
     bool eventFilter(QObject *watched, QEvent *event) override;
+
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
 
 private slots:
     void updateTime();
@@ -96,6 +101,14 @@ private:
 
     NetworkControls *networkControls;
     SecurityControls *securityControls;
+
+    bool isDragging;
+    QPoint dragStartPosition;
+    int dragThreshold;
+    QPropertyAnimation *panelAnimation;
+
+    void animatePanel(const QRect &endValue);
+    void swipePanelDown();
 };
 
 #endif // HOMESCREEN_H

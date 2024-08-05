@@ -17,7 +17,10 @@ HomeScreen::HomeScreen(QWidget *parent)
     currentAreaButton(nullptr),
     currentItemButton(nullptr),
     networkControls(new NetworkControls(this)),
-    securityControls(new SecurityControls(this))
+    securityControls(new SecurityControls(this)),
+    isDragging(false),
+    dragThreshold(500), // Adjust this value as needed
+    panelAnimation(new QPropertyAnimation(this))
 {
     // Create the central widget
     centralWidget = new QWidget(this);
@@ -43,6 +46,13 @@ HomeScreen::HomeScreen(QWidget *parent)
     updateTime();
 
     geometry();
+
+    this->installEventFilter(this);
+
+    panelAnimation->setTargetObject(optionPanel);
+    panelAnimation->setPropertyName("geometry");
+    panelAnimation->setEasingCurve(QEasingCurve::OutCubic);
+    panelAnimation->setDuration(300);
 
     this->show();
 }
@@ -90,7 +100,7 @@ void HomeScreen::geometry()
 
     dateLabel->setGeometry(200,
                            (topPanel->height() - dateLabel->height()) / 2,
-                           dateLabel->width(),
+                           dateLabel->width() + 20,
                            dateLabel->height());
 
     // Area panel
@@ -159,6 +169,7 @@ void HomeScreen::setUpTopPanel()
     dateFont.setPointSize(20);
     dateFont.setFamily("Arial");
     dateLabel->setFont(dateFont);
+    dateLabel->setAlignment(Qt::AlignLeft);
     dateLabel->adjustSize();
 }
 
@@ -281,10 +292,12 @@ void HomeScreen::setUpOptionPanel()
 {
     optionPanel = new QWidget(centralWidget);
     optionPanel->setStyleSheet("background-color: rgba(5,10,30,255);"
-                               "border-radius: 60px");
+                               "border-top-left-radius: 60px;"
+                               "border-top-right-radius: 60px;");
 
     // Create a layout for the option panel
     optionPanelLayout = new QVBoxLayout(optionPanel);
+
     optionPanel->setLayout(optionPanelLayout);
 
     qApp->installEventFilter(this);
@@ -532,48 +545,56 @@ void HomeScreen::statusButtonClicked()
 
 void HomeScreen::itemButtonClicked()
 {
-    // Get the button that was clicked
     QPushButton *clickedItemButton = qobject_cast<QPushButton*>(sender());
+    if (!clickedItemButton) return;
 
-    // Check if the clicked button is different from the current option button
+    // Update button styles
     if (currentItemButton && currentItemButton != clickedItemButton)
     {
-        // Reset the style of the previously selected button
-        currentItemButton->setStyleSheet("background-color: rgba(27,33,52,200);"
-                                         "color: white;"
-                                         "border-radius: 5px;");
+        currentItemButton->setStyleSheet("background-color: rgba(27,33,52,200); color: white; border-radius: 5px;");
     }
-
-    // Set the style of the clicked button to indicate its selection
-    clickedItemButton->setStyleSheet("background-color: rgba(58,94,171,255);"
-                                     "color: white;"
-                                     "border-radius: 5px;");
-
-    // Update the current button
+    clickedItemButton->setStyleSheet("background-color: rgba(58,94,171,255); color: white; border-radius: 5px;");
     currentItemButton = clickedItemButton;
 
-    // Clear the option panel layout before adding new content
+    // Clear and prepare the option panel
     clearOptionPanelLayout();
 
-    // Display options based on the clicked button
-    if (clickedItemButton == networkButton) {
+    // Determine which control to show
+    QWidget *controlWidget = nullptr;
+    if (clickedItemButton == networkButton)
+    {
+        controlWidget = new NetworkControls(this);
+        static_cast<NetworkControls*>(controlWidget)->setActive(true);
+    }
+    else if (clickedItemButton == securityButton)
+    {
+        controlWidget = new SecurityControls(this);
+    }
 
-        // Create a new instance of NetworkControls each time
-        NetworkControls *networkControlsInstance = new NetworkControls(this);
-        optionPanelLayout->addWidget(networkControlsInstance);
-        networkControlsInstance->setActive(true);
+    // If a control widget was created, show it in the option panel
+    if (controlWidget)
+    {
+        optionPanelLayout->addWidget(controlWidget);
+
+        // Position and animate the panel
+        QRect startGeometry(optionPanel->x(), centralWidget->height(),
+                            optionPanel->width(), optionPanel->height());
+        QRect endGeometry(optionPanel->x(), centralWidget->height() - optionPanel->height(),
+                          optionPanel->width(), optionPanel->height());
+
+        optionPanel->setGeometry(startGeometry);
         optionPanel->show();
+        animatePanel(endGeometry);
     }
-    else if(clickedItemButton == securityButton) {
-            // Create a new instance of SecurityControls each time
-            SecurityControls *securityControlsInstance = new SecurityControls(this);
-            optionPanelLayout->addWidget(securityControlsInstance);
-            optionPanel->show();
-    }
-    else {
-        // If it's not the network button, deactivate any existing NetworkControls
+    else
+    {
+        // If no control widget was created, hide the panel
+        optionPanel->hide();
+
+        // Deactivate any existing NetworkControls
         NetworkControls *existingNetworkControls = optionPanel->findChild<NetworkControls*>();
-        if (existingNetworkControls) {
+        if (existingNetworkControls)
+        {
             existingNetworkControls->setActive(false);
         }
     }
@@ -581,19 +602,110 @@ void HomeScreen::itemButtonClicked()
 
 bool HomeScreen::eventFilter(QObject *watched, QEvent *event)
 {
-    if (event->type() == QEvent::MouseButtonPress)
+    if (watched == this && event->type() == QEvent::MouseButtonPress)
     {
         QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
-        if (optionPanel->isVisible() && !optionPanel->geometry().contains(mouseEvent->globalPosition().toPoint()))
+        if (optionPanel->isVisible() && !optionPanel->geometry().contains(mouseEvent->pos()))
         {
-            optionPanel->hide();
-        }
-
-        // Deactivate NetworkControls when closing the panel
-        NetworkControls *existingNetworkControls = optionPanel->findChild<NetworkControls*>();
-        if (existingNetworkControls) {
-            existingNetworkControls->setActive(false);
+            swipePanelDown();
+            return true;
         }
     }
     return QMainWindow::eventFilter(watched, event);
+}
+
+void HomeScreen::swipePanelDown()
+{
+    if (optionPanel->isVisible())
+    {
+        QRect endGeometry(optionPanel->x(), height(),
+                          optionPanel->width(), optionPanel->height());
+        animatePanel(endGeometry);
+    }
+
+    // Deactivate any existing NetworkControls
+    NetworkControls *existingNetworkControls = optionPanel->findChild<NetworkControls*>();
+    if (existingNetworkControls)
+    {
+        existingNetworkControls->setActive(false);
+    }
+}
+
+void HomeScreen::mousePressEvent(QMouseEvent *event)
+{
+    if (optionPanel->isVisible())
+    {
+        // Define the drag area
+        QRect dragArea(optionPanel->x(), optionPanel->y(), optionPanel->width(), 80);
+
+        if (dragArea.contains(event->pos()))
+        {
+            isDragging = true;
+            dragStartPosition = event->pos();
+        }
+    }
+    QMainWindow::mousePressEvent(event);
+}
+
+void HomeScreen::mouseMoveEvent(QMouseEvent *event)
+{
+    if (isDragging)
+    {
+        int deltaY = event->pos().y() - dragStartPosition.y();
+        if (deltaY >= 0) // Only allow dragging downwards
+        {
+            QRect geometry = optionPanel->geometry();
+            geometry.moveTop(qMin(height() - optionPanel->height() + deltaY, height()));
+            optionPanel->setGeometry(geometry);
+        }
+    }
+    QMainWindow::mouseMoveEvent(event);
+}
+
+void HomeScreen::mouseReleaseEvent(QMouseEvent *event)
+{
+    if (isDragging)
+    {
+        isDragging = false;
+        int deltaY = event->pos().y() - dragStartPosition.y();
+
+        QRect endGeometry;
+        if (deltaY > dragThreshold)
+        {
+            // Close the panel
+            endGeometry = QRect(optionPanel->x(), height(),
+                                optionPanel->width(), optionPanel->height());
+
+            // Deactivate any existing NetworkControls
+            NetworkControls *existingNetworkControls = optionPanel->findChild<NetworkControls*>();
+            if (existingNetworkControls)
+            {
+                existingNetworkControls->setActive(false);
+            }
+        }
+        else
+        {
+            // Return to original position
+            endGeometry = QRect(optionPanel->x(), height() - optionPanel->height(),
+                                optionPanel->width(), optionPanel->height());
+        }
+
+        animatePanel(endGeometry);
+    }
+    QMainWindow::mouseReleaseEvent(event);
+}
+
+void HomeScreen::animatePanel(const QRect &endValue)
+{
+    panelAnimation->setStartValue(optionPanel->geometry());
+    panelAnimation->setEndValue(endValue);
+    panelAnimation->start();
+
+    // If panel is closing, hide it when animation finishes
+    if (endValue.y() >= height())
+    {
+        connect(panelAnimation, &QPropertyAnimation::finished, this, [this]() {
+            optionPanel->hide();
+        }, Qt::SingleShotConnection);
+    }
 }
