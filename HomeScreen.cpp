@@ -11,6 +11,7 @@
 NetworkControls *networkControls;
 SecurityControls *securityControls;
 
+// Constructor
 HomeScreen::HomeScreen(QWidget *parent)
     : QMainWindow(parent),
     timer(new QTimer(this)),
@@ -19,44 +20,49 @@ HomeScreen::HomeScreen(QWidget *parent)
     networkControls(new NetworkControls(this)),
     securityControls(new SecurityControls(this)),
     isDragging(false),
-    dragThreshold(500), // Adjust this value as needed
-    panelAnimation(new QPropertyAnimation(this))
+    dragThreshold(500),
+    optionPanelAnimation(new QPropertyAnimation(this))
 {
     // Create the central widget
     centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
 
-    // Set the background color to white
+    // Set the background color to a dark blue
     centralWidget->setStyleSheet("background-color: rgba(23,27,46,255);");
 
-    // Add panels
+    // Add homescreen panels
     setUpTopPanel();
     setUpAreaPanel();
     setUpItemPanel();
     setUpWeatherPanel();
     setUpOptionPanel();
 
-    // Connect the timer to the updateTime slot
+    // Connect the timer to update the time display
     connect(timer, &QTimer::timeout, this, &HomeScreen::updateTime);
 
-    // Start the time to update every 1000ms
-    timer->start();
+    // Start the time to update every 1 second (1000ms)
+    timer->start(1000);
 
     // Initial call to set the current time immediately
     updateTime();
 
+    // Apply the layout geometry
     geometry();
 
+    // Install the event filter for the homescreen
     this->installEventFilter(this);
 
-    panelAnimation->setTargetObject(optionPanel);
-    panelAnimation->setPropertyName("geometry");
-    panelAnimation->setEasingCurve(QEasingCurve::OutCubic);
-    panelAnimation->setDuration(300);
+    // Configure the option panel animation
+    optionPanelAnimation->setTargetObject(optionPanel);
+    optionPanelAnimation->setPropertyName("geometry");
+    optionPanelAnimation->setEasingCurve(QEasingCurve::OutCubic);
+    optionPanelAnimation->setDuration(300);
 
+    // Display the homescreen
     this->show();
 }
 
+// Destructor
 HomeScreen::~HomeScreen()
 {
     // Cleanup
@@ -64,10 +70,12 @@ HomeScreen::~HomeScreen()
 
 void HomeScreen::updateTime()
 {
+    // Get and format the current time
     QTime currentTime = QTime::currentTime();
     QString timeString = currentTime.toString("hh:mm");
     timeLabel->setText(timeString);
 
+    // Get and format the current date
     QDate currentDate = QDate::currentDate();
     QString dateString = currentDate.toString("ddd, MMM dd");
     dateLabel->setText(dateString);
@@ -76,50 +84,56 @@ void HomeScreen::updateTime()
 void HomeScreen::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
+
+    // Reapply the layout geometry
     geometry();
 }
 
 void HomeScreen::geometry()
 {
+    // Get the current dimensions of the central widget
     int windowWidth = centralWidget->width();
     int windowHeight = centralWidget->height();
 
-    // Top panel
+    // Top panel (it's at the top)
     topPanel->setGeometry(0, 0, windowWidth, windowHeight*0.08);
     topPanel->setFixedHeight(100);
 
+    // Center the title label within the top panel
     titleLabel->setGeometry((topPanel->width() - titleLabel->width()) / 2,
                             (topPanel->height() - titleLabel->height()) / 2,
                             titleLabel->width(),
                             titleLabel->height());
 
+    // Position time label near left of top panel
     timeLabel->setGeometry(100,
                            (topPanel->height() - timeLabel->height()) / 2,
                            timeLabel->width(),
                            timeLabel->height());
 
+    // Position the date label to the right of the time label
     dateLabel->setGeometry(200,
                            (topPanel->height() - dateLabel->height()) / 2,
-                           dateLabel->width() + 20,
+                           dateLabel->width() + 20, // Sometimes date is too long for label? Gets cut off. Don't know why.
                            dateLabel->height());
 
-    // Area panel
+    // Area panel (under the top panel)
     areaPanel->setGeometry(0, topPanel->height(), windowWidth, windowHeight*0.08);
     areaPanel->setFixedHeight(100);
 
-    // Option panel
+    // Item panel (centered-ish)
     itemPanel->setGeometry(windowWidth / 2.5,
                              areaPanel->height() + topPanel->height(),
                              windowWidth,
                              windowHeight - areaPanel->height() - topPanel->height() - 50);
 
-    // Weather panel
+    // Weather panel (left of item panel)
     weatherPanel->setGeometry(50,
                            areaPanel->height() + topPanel->height() + 50,
                            windowWidth / 5,
                            windowHeight - areaPanel->height() - topPanel->height() - 150);
 
-    // Option panel
+    // Option panel (almost covers screen, shows when an item is selected)
     optionPanel->setGeometry(0,
                              topPanel->height() + areaPanel->height() + 50,
                              windowWidth,
@@ -128,15 +142,16 @@ void HomeScreen::geometry()
 
 void HomeScreen::setUpTopPanel()
 {
+    // Create the top panel widget
     topPanel = new QWidget(centralWidget);
     topPanel->setStyleSheet("background-color: transparent;");
 
-    // Add top panel title
-    titleLabel = new QLabel("Control Panel", topPanel);
+    // Create the title label
+    titleLabel = new QLabel("Control Panel", topPanel); // Change title
     titleLabel->setStyleSheet("background-color: transparent; color: white;");
     titleLabel->setAlignment(Qt::AlignCenter);
 
-    // Set title font size
+    // Font for the title
     QFont titleFont = titleLabel->font();
     titleFont.setPointSize(20);
     titleFont.setFamily("Arial");
@@ -144,13 +159,13 @@ void HomeScreen::setUpTopPanel()
     titleLabel->setFont(titleFont);
     titleLabel->adjustSize();
 
-    // Add top panel time
+    // Create the time label
     timeLabel = new QLabel("00:00", topPanel);
     timeLabel->setStyleSheet("background-color: transparent; color: white;");
     timeLabel->setAlignment(Qt::AlignCenter);
     timeLabel->adjustSize();
 
-    // Set time font size
+    // Font for the time
     QFont timeFont = timeLabel->font();
     timeFont.setPointSize(20);
     timeFont.setFamily("Arial");
@@ -158,13 +173,13 @@ void HomeScreen::setUpTopPanel()
     timeLabel->setFont(timeFont);
     timeLabel->adjustSize();
 
-    // Add top panel time
+    // Create the date label
     dateLabel = new QLabel("Sun, Jan 01", topPanel);
     dateLabel->setStyleSheet("background-color: transparent; color: white;");
     dateLabel->setAlignment(Qt::AlignCenter);
     dateLabel->adjustSize();
 
-    // Set date font size
+    // Font for the date
     QFont dateFont = dateLabel->font();
     dateFont.setPointSize(20);
     dateFont.setFamily("Arial");
@@ -175,57 +190,63 @@ void HomeScreen::setUpTopPanel()
 
 void HomeScreen::setUpAreaPanel()
 {
+    // Create the area panel widget
     areaPanel = new QWidget(centralWidget);
     areaPanel->setStyleSheet("background-color: transparent;");
 
     // Create a horizontal layout
     areaPanelLayout = new QHBoxLayout(areaPanel);
 
-    // Create the buttons
+    // Create the area buttons (rooms/categories)
     allDevicesButton = new QPushButton("All Devices");
     pcButton = new QPushButton("PC");
     bedroomButton = new QPushButton("Bedroom");
     homeButton = new QPushButton("Home");
 
-    QFont buttonFont;
-    buttonFont.setPointSize(12);
-    buttonFont.setFamily("Arial");
-    buttonFont.setBold(true);
+    // Font for the area buttons
+    QFont areaButtonFont;
+    areaButtonFont.setPointSize(12);
+    areaButtonFont.setFamily("Arial");
+    areaButtonFont.setBold(true);
 
-    QString buttonStyle = QString("background-color: transparent;"
+    // Default style for area buttons
+    QString areaButtonStyle = QString("background-color: transparent;"
                                   "color: white;"
                                   "border-radius: 30px;");
 
-    QString selectedButtonStyle = QString("background-color: rgba(58,94,171,255);"
+    // Style for selected button (adds a blue background)
+    QString selectedAreaButtonStyle = QString("background-color: rgba(58,94,171,255);"
                                           "color: white;"
                                           "border-radius: 30px;");
 
+    // Minimum size for the buttons
     QSize minimumButtonSize(160, 60);
     allDevicesButton->setMinimumSize(minimumButtonSize);
     pcButton->setMinimumSize(minimumButtonSize);
     bedroomButton->setMinimumSize(minimumButtonSize);
     homeButton->setMinimumSize(minimumButtonSize);
 
-    allDevicesButton->setStyleSheet(selectedButtonStyle);
-    allDevicesButton->setFont(buttonFont);
-    pcButton->setStyleSheet(buttonStyle);
-    pcButton->setFont(buttonFont);
-    bedroomButton->setStyleSheet(buttonStyle);
-    bedroomButton->setFont(buttonFont);
-    homeButton->setStyleSheet(buttonStyle);
-    homeButton->setFont(buttonFont);
+    // Apply all styles and fonts to the buttons
+    allDevicesButton->setStyleSheet(selectedAreaButtonStyle);
+    allDevicesButton->setFont(areaButtonFont);
+    pcButton->setStyleSheet(areaButtonStyle);
+    pcButton->setFont(areaButtonFont);
+    bedroomButton->setStyleSheet(areaButtonStyle);
+    bedroomButton->setFont(areaButtonFont);
+    homeButton->setStyleSheet(areaButtonStyle);
+    homeButton->setFont(areaButtonFont);
 
-    // Connect the buttons to the slot
+    // Connect the buttons to the click handler
     connect(allDevicesButton, &QPushButton::clicked, this, &HomeScreen::areaButtonClicked);
     connect(pcButton, &QPushButton::clicked, this, &HomeScreen::areaButtonClicked);
     connect(bedroomButton, &QPushButton::clicked, this, &HomeScreen::areaButtonClicked);
     connect(homeButton, &QPushButton::clicked, this, &HomeScreen::areaButtonClicked);
 
-    // Add a spacer item to the left of the buttons
+    // Add a small spacer item to the left of the buttons to keep away from window edge
     QSpacerItem *leftSpacer = new QSpacerItem(50, 0, QSizePolicy::Fixed, QSizePolicy::Minimum);
     areaPanelLayout->addItem(leftSpacer);
 
-    // Add the buttons to the horizontal layout
+    // Add the buttons to the horizontal layout with a small spacing between each button
     areaPanelLayout->addWidget(allDevicesButton);
     areaPanelLayout->addSpacing(10);
     areaPanelLayout->addWidget(pcButton);
@@ -242,95 +263,12 @@ void HomeScreen::setUpAreaPanel()
     currentAreaButton = allDevicesButton;
 }
 
-void HomeScreen::setUpWeatherPanel()
-{
-    weatherPanel = new QWidget(centralWidget);
-    weatherPanel->setStyleSheet("background-color: rgba(27,33,52,200);"
-                             "border-radius: 100;");
-
-    QFont weatherConditionFont;
-    weatherConditionFont.setPointSize(30);
-    weatherConditionFont.setFamily("Arial");
-    weatherConditionFont.setBold(true);
-
-    QFont weatherTemperatureFont;
-    weatherTemperatureFont.setPointSize(60);
-    weatherTemperatureFont.setFamily("Arial");
-    weatherTemperatureFont.setBold(true);
-
-    QFont weatherFeelsLikeTemperatureFont;
-    weatherFeelsLikeTemperatureFont.setPointSize(20);
-    weatherFeelsLikeTemperatureFont.setFamily("Arial");
-    weatherFeelsLikeTemperatureFont.setBold(false);
-
-    weatherPanelLayout = new QVBoxLayout(weatherPanel);
-
-    weatherConditionLabel = new QLabel("Clear", weatherPanel);
-    weatherConditionLabel->setFont(weatherConditionFont);
-    weatherConditionLabel->setStyleSheet("background-color: transparent; color: white;");
-
-    weatherTemperatureLabel = new QLabel("18°C", weatherPanel);
-    weatherTemperatureLabel->setFont(weatherTemperatureFont);
-    weatherTemperatureLabel->setStyleSheet("background-color: transparent; color: white;");
-
-    weatherFeelsLikeTemperatureLabel = new QLabel("Feels like: 19°C", weatherPanel);
-    weatherFeelsLikeTemperatureLabel->setFont(weatherFeelsLikeTemperatureFont);
-    weatherFeelsLikeTemperatureLabel->setStyleSheet("background-color: transparent; color: white;");
-
-    weatherPanelLayout->addWidget(weatherConditionLabel);
-    weatherPanelLayout->addSpacing(30);
-    weatherPanelLayout->addWidget(weatherTemperatureLabel);
-    weatherPanelLayout->addSpacing(30);
-    weatherPanelLayout->addWidget(weatherFeelsLikeTemperatureLabel);
-    weatherPanelLayout->setContentsMargins(0, 0, 0, 0);
-
-    weatherPanel->setLayout(weatherPanelLayout);
-    weatherPanelLayout->setAlignment(Qt::AlignCenter);
-}
-
-void HomeScreen::setUpOptionPanel()
-{
-    optionPanel = new QWidget(centralWidget);
-    optionPanel->setStyleSheet("background-color: rgba(5,10,30,255);"
-                               "border-top-left-radius: 60px;"
-                               "border-top-right-radius: 60px;");
-
-    // Create a layout for the option panel
-    optionPanelLayout = new QVBoxLayout(optionPanel);
-
-    optionPanel->setLayout(optionPanelLayout);
-
-    qApp->installEventFilter(this);
-    optionPanel->hide();
-}
-
-void HomeScreen::clearOptionPanelLayout()
-{
-    QLayoutItem *child;
-    while ((child = optionPanelLayout->takeAt(0)) != nullptr)
-    {
-        if (child->widget())
-        {
-            child->widget()->setParent(nullptr);
-            child->widget()->deleteLater();
-        }
-        delete child; // Delete the layout item
-    }
-}
-
-void HomeScreen::updateWeatherPanel(const QString &condition, const QString &temperature, const QString &feelsliketemperature)
-{
-    weatherConditionLabel->setText(condition);
-    weatherTemperatureLabel->setText(temperature);
-    weatherFeelsLikeTemperatureLabel->setText(feelsliketemperature);
-}
-
 void HomeScreen::areaButtonClicked()
 {
     // Get the button that was clicked
     QPushButton *clickedAreaButton = qobject_cast<QPushButton*>(sender());
 
-    // Reset the style of any previously selected button
+    // Reset the style of the previously selected button
     if (currentAreaButton)
     {
         currentAreaButton->setStyleSheet("background-color: transparent;"
@@ -347,7 +285,6 @@ void HomeScreen::areaButtonClicked()
     currentAreaButton = clickedAreaButton;
 
     // Clear the current option panel layout before showing the new one
-    // TODO: understand this
     QLayoutItem *child;
     while ((child = itemPanelLayout->takeAt(0)) != 0)
     {
@@ -355,10 +292,10 @@ void HomeScreen::areaButtonClicked()
         delete child;
     }
 
-    // Reset the current option button when changing options (prevents crash)
+    // Reset the current item button when changing options (prevents crash)
     currentItemButton = nullptr;
 
-    // Update the option panel based on the selected area button
+    // Update the item panel based on the selected area button
     if (clickedAreaButton == allDevicesButton)
     {
         allDevicesButtons();
@@ -369,137 +306,246 @@ void HomeScreen::areaButtonClicked()
     }
 }
 
+void HomeScreen::setUpWeatherPanel()
+{
+    // Create the weather panel widget
+    weatherPanel = new QWidget(centralWidget);
+    weatherPanel->setStyleSheet("background-color: rgba(27,33,52,200);"
+                             "border-radius: 100;");
+
+    // Set up fonts for weather labels
+    QFont weatherConditionFont;
+    weatherConditionFont.setPointSize(30);
+    weatherConditionFont.setFamily("Arial");
+    weatherConditionFont.setBold(true);
+
+    QFont weatherTemperatureFont;
+    weatherTemperatureFont.setPointSize(60);
+    weatherTemperatureFont.setFamily("Arial");
+    weatherTemperatureFont.setBold(true);
+
+    QFont weatherFeelsLikeTemperatureFont;
+    weatherFeelsLikeTemperatureFont.setPointSize(20);
+    weatherFeelsLikeTemperatureFont.setFamily("Arial");
+    weatherFeelsLikeTemperatureFont.setBold(false);
+
+    // Create a vertical layout
+    weatherPanelLayout = new QVBoxLayout(weatherPanel);
+
+    // Styles for weather labels
+    weatherConditionLabel = new QLabel("Clear", weatherPanel);
+    weatherConditionLabel->setFont(weatherConditionFont);
+    weatherConditionLabel->setStyleSheet("background-color: transparent; color: white;");
+
+    weatherTemperatureLabel = new QLabel("18°C", weatherPanel);
+    weatherTemperatureLabel->setFont(weatherTemperatureFont);
+    weatherTemperatureLabel->setStyleSheet("background-color: transparent; color: white;");
+
+    weatherFeelsLikeTemperatureLabel = new QLabel("Feels like: 19°C", weatherPanel);
+    weatherFeelsLikeTemperatureLabel->setFont(weatherFeelsLikeTemperatureFont);
+    weatherFeelsLikeTemperatureLabel->setStyleSheet("background-color: transparent; color: white;");
+
+    // Add weather labels to the vertical layout
+    weatherPanelLayout->addWidget(weatherConditionLabel);
+    weatherPanelLayout->addSpacing(30);
+    weatherPanelLayout->addWidget(weatherTemperatureLabel);
+    weatherPanelLayout->addSpacing(30);
+    weatherPanelLayout->addWidget(weatherFeelsLikeTemperatureLabel);
+    weatherPanelLayout->setContentsMargins(0, 0, 0, 0);
+
+    // Set the layout for the weather panel
+    weatherPanel->setLayout(weatherPanelLayout);
+    weatherPanelLayout->setAlignment(Qt::AlignCenter);
+}
+
+// Not yet used
+void HomeScreen::updateWeatherPanel(const QString &condition, const QString &temperature, const QString &feelsliketemperature)
+{
+    // Update the weather panel labels with provided information
+    weatherConditionLabel->setText(condition);
+    weatherTemperatureLabel->setText(temperature);
+    weatherFeelsLikeTemperatureLabel->setText(feelsliketemperature);
+}
+
+void HomeScreen::setUpOptionPanel()
+{
+    // Create the option panel widget
+    optionPanel = new QWidget(centralWidget);
+    optionPanel->setStyleSheet("background-color: rgba(5,10,30,255);"
+                               "border-top-left-radius: 60px;"
+                               "border-top-right-radius: 60px;");
+
+    // Create a vertical layout
+    optionPanelLayout = new QVBoxLayout(optionPanel);
+    optionPanel->setLayout(optionPanelLayout);
+
+    // Install an event filter
+    qApp->installEventFilter(this);
+
+    // Hide the option panel until needed
+    optionPanel->hide();
+}
+
+void HomeScreen::clearOptionPanelLayout()
+{
+    // Loop through all items in the option panel layout
+    QLayoutItem *child;
+    while ((child = optionPanelLayout->takeAt(0)) != nullptr)
+    {
+        // Remove widget from its parent and schedule for deletion
+        if (child->widget())
+        {
+            child->widget()->setParent(nullptr);
+            child->widget()->deleteLater();
+        }
+        // Delete the layout item itself
+        delete child;
+    }
+}
+
 void HomeScreen::setUpItemPanel()
 {
+    // Create the item panel widget
     itemPanel = new QWidget(centralWidget);
     itemPanel->setStyleSheet("background-color: transparent;");
 
     // Create a grid layout
     itemPanelLayout = new QGridLayout(itemPanel);
-
     itemPanelLayout->setSpacing(10);
 
-    // Call the function to set up the all devices buttons
+    // Set up the "all devices" buttons
     allDevicesButtons();
 
-    // Set the grid layout for the option panel
+    // Set the grid layout for the item panel
     itemPanel->setLayout(itemPanelLayout);
     itemPanelLayout->setAlignment(Qt::AlignLeft | Qt::AlignCenter);
 }
 
-QPushButton* HomeScreen::setUpButton(const QString &text, const QSize &size, const QString &style, int row, int col, QGridLayout *layout)
+QPushButton* HomeScreen::setUpItemButton(const QString &text, const QSize &size, const QString &style, int row, int col, QGridLayout *layout)
 {
-    QPushButton *button = new QPushButton(text);
-    button->setFixedSize(size);
-    button->setStyleSheet(style);
+    // Create a new button with the given text
+    QPushButton *itemButton = new QPushButton(text);
+    itemButton->setFixedSize(size);
+    itemButton->setStyleSheet(style);
 
-    QFont buttonFont;
-    buttonFont.setPointSize(16);
-    buttonFont.setFamily("Arial");
-    buttonFont.setBold(true);
-    button->setFont(buttonFont);
+    // Font for item buttons
+    QFont itemButtonFont;
+    itemButtonFont.setPointSize(16);
+    itemButtonFont.setFamily("Arial");
+    itemButtonFont.setBold(true);
+    itemButton->setFont(itemButtonFont);
 
-    layout->addWidget(button, row, col);
-
-    return button;
+    // Add the button to the given layout at the given position
+    layout->addWidget(itemButton, row, col);
+    return itemButton;
 }
 
 void HomeScreen::allDevicesButtons()
 {
-    // Create a widget to hold the secondary grid layout
-    QWidget *smallButtonsWidget = new QWidget;
+    // Create a widget to hold the secondary grid layout for the small buttons
+    QWidget *smallItemButtonsWidget = new QWidget;
 
-    QSize smallButtonSize(220, 220);
-    QSize largeButtonSize(450, 450);
+    // Define buttons sizes
+    QSize smallItemButtonSize(220, 220);
+    QSize largeItemButtonSize(450, 450);
 
-    QString buttonStyle = QString("background-color: rgba(27,33,52,200);"
+    // Default style for item buttons
+    QString itemButtonStyle = QString("background-color: rgba(27,33,52,200);"
                                   "color: white;"
                                   "border-radius: 5px;");
 
-    QString selectedButtonStyle = QString("background-color: rgba(58,94,171,255);"
+    // Style for selected button (adds a blue background)
+    QString selectedItemButtonStyle = QString("background-color: rgba(58,94,171,255);"
                                           "color: white;"
                                           "border-radius: 5px;");
 
-    // Create a secondary grid layout for smaller buttons
-    QGridLayout *smallButtonsLayout = new QGridLayout;
+    // Create a secondary grid layout for the small buttons
+    QGridLayout *smallItemButtonLayout = new QGridLayout;
 
     // Create the small buttons
-    getUpButton = setUpButton("Get Up", smallButtonSize, buttonStyle, 0, 0, smallButtonsLayout);
-    leaveButton = setUpButton("Leave", smallButtonSize, buttonStyle, 0, 1, smallButtonsLayout);
-    atHomeButton = setUpButton("Home", smallButtonSize, selectedButtonStyle, 1, 0, smallButtonsLayout);
-    sleepButton = setUpButton("Sleep", smallButtonSize, buttonStyle, 1, 1, smallButtonsLayout);
+    getUpButton = setUpItemButton("Get Up", smallItemButtonSize, itemButtonStyle, 0, 0, smallItemButtonLayout);
+    leaveButton = setUpItemButton("Leave", smallItemButtonSize, itemButtonStyle, 0, 1, smallItemButtonLayout);
+    atHomeButton = setUpItemButton("Home", smallItemButtonSize, selectedItemButtonStyle, 1, 0, smallItemButtonLayout);
+    toSleepButton = setUpItemButton("Sleep", smallItemButtonSize, itemButtonStyle, 1, 1, smallItemButtonLayout);
 
     // Create the large buttons
-    networkButton = setUpButton("Network", largeButtonSize, buttonStyle, 0, 1, itemPanelLayout);
-    lightsButton = setUpButton("Lights", largeButtonSize, buttonStyle, 1, 0, itemPanelLayout);
-    thermostatButton = setUpButton("Thermostat", largeButtonSize, buttonStyle, 1, 1, itemPanelLayout);
+    networkButton = setUpItemButton("Network", largeItemButtonSize, itemButtonStyle, 0, 1, itemPanelLayout);
+    lightsButton = setUpItemButton("Lights", largeItemButtonSize, itemButtonStyle, 1, 0, itemPanelLayout);
+    thermostatButton = setUpItemButton("Thermostat", largeItemButtonSize, itemButtonStyle, 1, 1, itemPanelLayout);
 
-    // Connect the small buttons to their slot
+    // Connect the small buttons to their click handler
     connect(getUpButton, &QPushButton::clicked, this, &HomeScreen::statusButtonClicked);
     connect(leaveButton, &QPushButton::clicked, this, &HomeScreen::statusButtonClicked);
     connect(atHomeButton, &QPushButton::clicked, this, &HomeScreen::statusButtonClicked);
-    connect(sleepButton, &QPushButton::clicked, this, &HomeScreen::statusButtonClicked);
+    connect(toSleepButton, &QPushButton::clicked, this, &HomeScreen::statusButtonClicked);
 
-    // Connect the large buttons to their slot
+    // Connect the large buttons to their click handler
     connect(networkButton, &QPushButton::clicked, this, &HomeScreen::itemButtonClicked);
     connect(lightsButton, &QPushButton::clicked, this, &HomeScreen::itemButtonClicked);
     connect(thermostatButton, &QPushButton::clicked, this, &HomeScreen::itemButtonClicked);
 
-    smallButtonsLayout->setSpacing(10);
-    smallButtonsLayout->setContentsMargins(0, 0, 0, 0);
-    smallButtonsWidget->setLayout(smallButtonsLayout);
+    // Set up the for the small buttons
+    smallItemButtonLayout->setSpacing(10);
+    smallItemButtonLayout->setContentsMargins(0, 0, 0, 0);
+    smallItemButtonsWidget->setLayout(smallItemButtonLayout);
 
-    itemPanelLayout->addWidget(smallButtonsWidget, 0, 0);
+    // Add the small buttons widget to the main item panel layout
+    itemPanelLayout->addWidget(smallItemButtonsWidget, 0, 0);
 
+    // Set the initial status button as "At Home"
     currentStatusButton = atHomeButton;
 }
 
 void HomeScreen::pcButtons()
 {
-    // Create a widget to hold the secondary grid layout
-    QWidget *smallButtonsWidget = new QWidget;
+    // Create a widget to hold the secondary grid layout for the small buttons
+    QWidget *smallItemButtonsWidget = new QWidget;
 
-    QSize smallButtonSize(220, 220);
-    QSize largeButtonSize(450, 450);
+    // Define buttons sizes
+    QSize smallItemButtonSize(220, 220);
+    QSize largeItemButtonSize(450, 450);
 
-    QString buttonStyle = QString("background-color: rgba(27,33,52,200);"
+    // Default style for item buttons
+    QString itemButtonStyle = QString("background-color: rgba(27,33,52,200);"
                                   "color: white;"
                                   "border-radius: 5px;");
 
-    // Create a secondary grid layout for smaller buttons
-    QGridLayout *smallButtonsLayout = new QGridLayout;
+    // Create a secondary grid layout for small buttons
+    QGridLayout *smallItemButtonsLayout = new QGridLayout;
 
     // Create the small buttons
-    shutDownButton = setUpButton("Shut Down", smallButtonSize, buttonStyle, 0, 0, smallButtonsLayout);
-    restartButton = setUpButton("Restart", smallButtonSize, buttonStyle, 0, 1, smallButtonsLayout);
-    sleepButton = setUpButton("Sleep", smallButtonSize, buttonStyle, 1, 0, smallButtonsLayout);
-    lockButton = setUpButton("Lock", smallButtonSize, buttonStyle, 1, 1, smallButtonsLayout);
+    shutDownButton = setUpItemButton("Shut Down", smallItemButtonSize, itemButtonStyle, 0, 0, smallItemButtonsLayout);
+    restartButton = setUpItemButton("Restart", smallItemButtonSize, itemButtonStyle, 0, 1, smallItemButtonsLayout);
+    sleepButton = setUpItemButton("Sleep", smallItemButtonSize, itemButtonStyle, 1, 0, smallItemButtonsLayout);
+    lockButton = setUpItemButton("Lock", smallItemButtonSize, itemButtonStyle, 1, 1, smallItemButtonsLayout);
 
-    // Connect the small buttons to their respective slots
+    // Connect the small buttons to their click handler
     connect(shutDownButton, &QPushButton::clicked, this, &HomeScreen::handleShutDown);
     connect(restartButton, &QPushButton::clicked, this, &HomeScreen::handleRestart);
     connect(sleepButton, &QPushButton::clicked, this, &HomeScreen::handleSleep);
     connect(lockButton, &QPushButton::clicked, this, &HomeScreen::handleLock);
 
     // Create the large buttons
-    networkButton = setUpButton("WI-FI", largeButtonSize, buttonStyle, 0, 1, itemPanelLayout);
-    lightsButton = setUpButton("LEDs", largeButtonSize, buttonStyle, 1, 0, itemPanelLayout);
-    securityButton = setUpButton("Security", largeButtonSize, buttonStyle, 1, 1, itemPanelLayout);
-    remoteButton = setUpButton("Remote", largeButtonSize, buttonStyle, 0, 2, itemPanelLayout);
-    systemButton = setUpButton("System", largeButtonSize, buttonStyle, 1, 2, itemPanelLayout);
+    networkButton = setUpItemButton("WI-FI", largeItemButtonSize, itemButtonStyle, 0, 1, itemPanelLayout);
+    lightsButton = setUpItemButton("LEDs", largeItemButtonSize, itemButtonStyle, 1, 0, itemPanelLayout);
+    securityButton = setUpItemButton("Security", largeItemButtonSize, itemButtonStyle, 1, 1, itemPanelLayout);
+    remoteButton = setUpItemButton("Remote", largeItemButtonSize, itemButtonStyle, 0, 2, itemPanelLayout);
+    systemButton = setUpItemButton("System", largeItemButtonSize, itemButtonStyle, 1, 2, itemPanelLayout);
 
+    // Connect the large buttons to their click handler
     connect(networkButton, &QPushButton::clicked, this, &HomeScreen::itemButtonClicked);
     connect(lightsButton, &QPushButton::clicked, this, &HomeScreen::itemButtonClicked);
     connect(securityButton, &QPushButton::clicked, this, &HomeScreen::itemButtonClicked);
     connect(remoteButton, &QPushButton::clicked, this, &HomeScreen::itemButtonClicked);
     connect(systemButton, &QPushButton::clicked, this, &HomeScreen::itemButtonClicked);
 
-    smallButtonsLayout->setSpacing(10);
-    smallButtonsLayout->setContentsMargins(0, 0, 0, 0);
-    smallButtonsWidget->setLayout(smallButtonsLayout);
+    // Set up the for the small buttons
+    smallItemButtonsLayout->setSpacing(10);
+    smallItemButtonsLayout->setContentsMargins(0, 0, 0, 0);
+    smallItemButtonsWidget->setLayout(smallItemButtonsLayout);
 
     // Add the buttons to the grid layout
-    itemPanelLayout->addWidget(smallButtonsWidget, 0, 0);
+    itemPanelLayout->addWidget(smallItemButtonsWidget, 0, 0);
 }
 
 void HomeScreen::handleShutDown()
@@ -526,7 +572,7 @@ void HomeScreen::statusButtonClicked()
     // Get the button that was clicked
     QPushButton *clickedStatusButton = qobject_cast<QPushButton*>(sender());
 
-    // Reset the style of any previously selected button
+    // Reset the style of the previously selected button
     if (currentStatusButton)
     {
         currentStatusButton->setStyleSheet("background-color: rgba(27,33,52,200);"
@@ -545,6 +591,7 @@ void HomeScreen::statusButtonClicked()
 
 void HomeScreen::itemButtonClicked()
 {
+    // Get the button that was clicked
     QPushButton *clickedItemButton = qobject_cast<QPushButton*>(sender());
     if (!clickedItemButton) return;
 
@@ -604,6 +651,7 @@ bool HomeScreen::eventFilter(QObject *watched, QEvent *event)
 {
     if (watched == this && event->type() == QEvent::MouseButtonPress)
     {
+        // Swipe the option panel down if the user clicks outside of it
         QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
         if (optionPanel->isVisible() && !optionPanel->geometry().contains(mouseEvent->pos()))
         {
@@ -618,8 +666,10 @@ void HomeScreen::swipePanelDown()
 {
     if (optionPanel->isVisible())
     {
+        // Calculate the end position for ther panel animation (just off-screen)
         QRect endGeometry(optionPanel->x(), height(),
                           optionPanel->width(), optionPanel->height());
+        // Start the option panel animation
         animatePanel(endGeometry);
     }
 
@@ -638,6 +688,7 @@ void HomeScreen::mousePressEvent(QMouseEvent *event)
         // Define the drag area
         QRect dragArea(optionPanel->x(), optionPanel->y(), optionPanel->width(), 80);
 
+        // Start dragging if the mouse press is within the drag area
         if (dragArea.contains(event->pos()))
         {
             isDragging = true;
@@ -654,6 +705,7 @@ void HomeScreen::mouseMoveEvent(QMouseEvent *event)
         int deltaY = event->pos().y() - dragStartPosition.y();
         if (deltaY >= 0) // Only allow dragging downwards
         {
+            // Move the option panel based on the drag distance
             QRect geometry = optionPanel->geometry();
             geometry.moveTop(qMin(height() - optionPanel->height() + deltaY, height()));
             optionPanel->setGeometry(geometry);
@@ -672,7 +724,7 @@ void HomeScreen::mouseReleaseEvent(QMouseEvent *event)
         QRect endGeometry;
         if (deltaY > dragThreshold)
         {
-            // Close the panel
+            // Close the panel if dragged far enough and released
             endGeometry = QRect(optionPanel->x(), height(),
                                 optionPanel->width(), optionPanel->height());
 
@@ -685,7 +737,7 @@ void HomeScreen::mouseReleaseEvent(QMouseEvent *event)
         }
         else
         {
-            // Return to original position
+            // Return to original position if not dragged and released far enough
             endGeometry = QRect(optionPanel->x(), height() - optionPanel->height(),
                                 optionPanel->width(), optionPanel->height());
         }
@@ -697,14 +749,15 @@ void HomeScreen::mouseReleaseEvent(QMouseEvent *event)
 
 void HomeScreen::animatePanel(const QRect &endValue)
 {
-    panelAnimation->setStartValue(optionPanel->geometry());
-    panelAnimation->setEndValue(endValue);
-    panelAnimation->start();
+    // Set up the option panel animation
+    optionPanelAnimation->setStartValue(optionPanel->geometry());
+    optionPanelAnimation->setEndValue(endValue);
+    optionPanelAnimation->start();
 
-    // If panel is closing, hide it when animation finishes
+    // If panel is closing, hide it when the animation finishes
     if (endValue.y() >= height())
     {
-        connect(panelAnimation, &QPropertyAnimation::finished, this, [this]() {
+        connect(optionPanelAnimation, &QPropertyAnimation::finished, this, [this]() {
             optionPanel->hide();
         }, Qt::SingleShotConnection);
     }
