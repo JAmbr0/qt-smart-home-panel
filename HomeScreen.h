@@ -3,6 +3,7 @@
 
 #include "NetworkControls.h"
 #include "SecurityControls.h"
+#include "Weather.h"
 
 #include <QMainWindow>
 #include <QWidget>
@@ -57,7 +58,7 @@ private:
     void pcButtons();
 
     // Helper methods
-    void updateWeatherPanel(const QString &condition, const QString &temperature, const QString &feelsliketemperature);
+    void updateWeatherPanel(const QString &condition, const QString &temperature, const QString &apparenttemperature, double windSpeedVal, double windDirVal);
     void adjustFontSizes();
     QPushButton* setUpItemButton(const QString &text, const QSize &size, const QString &style, int row, int col, QGridLayout *layout);
     void animatePanel(const QRect &endValue);
@@ -78,6 +79,8 @@ private:
 
     // Timers
     QTimer *timer;
+    QTimer *weatherTimer;
+    Weather *weather;
 
     // Area buttons
     QPushButton *allDevicesButton;
@@ -119,7 +122,9 @@ private:
     // Weather labels
     QLabel *weatherConditionLabel;
     QLabel *weatherTemperatureLabel;
-    QLabel *weatherFeelsLikeTemperatureLabel;
+    QLabel *weatherApparentTemperatureLabel;
+    QLabel *weatherWindLabel;
+    QLabel *weatherIconLabel;
 
     // Control widgets
     NetworkControls *networkControls;

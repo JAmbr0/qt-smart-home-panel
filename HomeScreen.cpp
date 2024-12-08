@@ -1,12 +1,17 @@
 #include "HomeScreen.h"
 #include "NetworkControls.h"
 #include "SecurityControls.h"
+#include "Weather.h"
 #include <QTime>
 #include <QDate>
 #include <QProcess>
 #include <QMessageBox>
 #include <QNetworkInterface>
 #include <QMouseEvent>
+#include <QDebug>
+#include <QPixmap>
+#include <QPainter>
+#include <cmath>
 
 NetworkControls *networkControls;
 SecurityControls *securityControls;
@@ -15,6 +20,8 @@ SecurityControls *securityControls;
 HomeScreen::HomeScreen(QWidget *parent)
     : QMainWindow(parent),
     timer(new QTimer(this)),
+    weatherTimer(new QTimer(this)),
+    weather(new Weather(this)),
     currentAreaButton(nullptr),
     currentItemButton(nullptr),
     networkControls(new NetworkControls(this)),
@@ -57,6 +64,42 @@ HomeScreen::HomeScreen(QWidget *parent)
     optionPanelAnimation->setPropertyName("geometry");
     optionPanelAnimation->setEasingCurve(QEasingCurve::OutCubic);
     optionPanelAnimation->setDuration(300);
+
+    connect(weather, &Weather::weatherDataUpdated, this, [this]() {
+        double tempVal = weather->getTemperature().toDouble();
+        double apparentVal = weather->getApparentTemperature().toDouble();
+        double precipVal = weather->getPrecipitation().toDouble();
+        double cloudVal = weather->getCloudCover().toDouble();
+        double windVal = weather->getWindSpeed().toDouble();
+        double windDir = weather->getWindDirection().toDouble();
+        double snowVal = weather->getSnowfall().toDouble();
+        bool day = (weather->getIsDay().toDouble() == 1.0);
+
+        QString tempStr = QString::number(tempVal, 'f', 1) + "°C";
+        QString apparentStr = "Feels Like: " + QString::number(apparentVal, 'f', 1) + "°C";
+
+        QString conditionKey;
+        if (snowVal >= 0.1) {
+            conditionKey = "Snow";
+        } else if (precipVal >= 0.1) {
+            conditionKey = "Rain";
+        } else if (precipVal < 0.1 && snowVal < 0.1 && windVal >= 8.0 && cloudVal < 20.0) {
+            conditionKey = day ? "Windy-Day" : "Windy-Night";
+        } else if (precipVal < 0.1 && snowVal < 0.1 && cloudVal >= 80.0) {
+            conditionKey = "Overcast";
+        } else if (precipVal < 0.1 && snowVal < 0.1 && cloudVal < 20.0) {
+            conditionKey = day ? "Clear-Day" : "Clear-Night";
+        } else {
+            conditionKey = day ? "Few-Clouds-Day" : "Few-Clouds-Night";
+        }
+
+        updateWeatherPanel(conditionKey, tempStr, apparentStr, windVal, windDir);
+    });
+    weather->updateWeatherData();
+
+    // Update weather info every minute
+    connect(weatherTimer, &QTimer::timeout, weather, &Weather::updateWeatherData);
+    weatherTimer->start(600000);
 
     // Display the homescreen
     this->show();
@@ -306,65 +349,117 @@ void HomeScreen::areaButtonClicked()
     }
 }
 
+static QPixmap recolorIcon(const QPixmap &original)
+{
+    QImage img = original.toImage().convertToFormat(QImage::Format_ARGB32);
+    QPixmap colored(img.size());
+    colored.fill(Qt::transparent);
+
+    QPainter p(&colored);
+    p.drawImage(0, 0, img);
+    p.setCompositionMode(QPainter::CompositionMode_SourceIn);
+    p.fillRect(img.rect(), Qt::white);
+    p.end();
+
+    return colored;
+}
+
 void HomeScreen::setUpWeatherPanel()
 {
-    // Create the weather panel widget
     weatherPanel = new QWidget(centralWidget);
     weatherPanel->setStyleSheet("background-color: rgba(27,33,52,200);"
-                             "border-radius: 100;");
-
-    // Set up fonts for weather labels
-    QFont weatherConditionFont;
-    weatherConditionFont.setPointSize(30);
-    weatherConditionFont.setFamily("Arial");
-    weatherConditionFont.setBold(true);
+                                "border-radius: 100;");
 
     QFont weatherTemperatureFont;
     weatherTemperatureFont.setPointSize(60);
     weatherTemperatureFont.setFamily("Arial");
     weatherTemperatureFont.setBold(true);
 
-    QFont weatherFeelsLikeTemperatureFont;
-    weatherFeelsLikeTemperatureFont.setPointSize(20);
-    weatherFeelsLikeTemperatureFont.setFamily("Arial");
-    weatherFeelsLikeTemperatureFont.setBold(false);
+    QFont weatherApparentTemperatureFont;
+    weatherApparentTemperatureFont.setPointSize(20);
+    weatherApparentTemperatureFont.setFamily("Arial");
 
-    // Create a vertical layout
+    QFont weatherWindFont;
+    weatherWindFont.setPointSize(20);
+    weatherWindFont.setFamily("Arial");
+
     weatherPanelLayout = new QVBoxLayout(weatherPanel);
 
-    // Styles for weather labels
-    weatherConditionLabel = new QLabel("Clear", weatherPanel);
-    weatherConditionLabel->setFont(weatherConditionFont);
-    weatherConditionLabel->setStyleSheet("background-color: transparent; color: white;");
+    weatherIconLabel = new QLabel(weatherPanel);
+    weatherIconLabel->setAlignment(Qt::AlignCenter);
+    weatherIconLabel->setStyleSheet("background: transparent;");
+    QPixmap defaultIcon("");
+    weatherIconLabel->setPixmap(recolorIcon(defaultIcon).scaled(100,100, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
-    weatherTemperatureLabel = new QLabel("18°C", weatherPanel);
+    weatherTemperatureLabel = new QLabel("N/A", weatherPanel);
     weatherTemperatureLabel->setFont(weatherTemperatureFont);
-    weatherTemperatureLabel->setStyleSheet("background-color: transparent; color: white;");
+    weatherTemperatureLabel->setStyleSheet("background: transparent; color: white;");
+    weatherTemperatureLabel->setAlignment(Qt::AlignCenter);
 
-    weatherFeelsLikeTemperatureLabel = new QLabel("Feels like: 19°C", weatherPanel);
-    weatherFeelsLikeTemperatureLabel->setFont(weatherFeelsLikeTemperatureFont);
-    weatherFeelsLikeTemperatureLabel->setStyleSheet("background-color: transparent; color: white;");
+    weatherApparentTemperatureLabel = new QLabel("N/A", weatherPanel);
+    weatherApparentTemperatureLabel->setFont(weatherApparentTemperatureFont);
+    weatherApparentTemperatureLabel->setStyleSheet("background: transparent; color: white;");
+    weatherApparentTemperatureLabel->setAlignment(Qt::AlignCenter);
 
-    // Add weather labels to the vertical layout
-    weatherPanelLayout->addWidget(weatherConditionLabel);
+    weatherWindLabel = new QLabel("N/A", weatherPanel);
+    weatherWindLabel->setFont(weatherWindFont);
+    weatherWindLabel->setStyleSheet("background: transparent; color: white;");
+    weatherWindLabel->setAlignment(Qt::AlignCenter);
+
+    weatherPanelLayout->addWidget(weatherIconLabel);
     weatherPanelLayout->addSpacing(30);
     weatherPanelLayout->addWidget(weatherTemperatureLabel);
-    weatherPanelLayout->addSpacing(30);
-    weatherPanelLayout->addWidget(weatherFeelsLikeTemperatureLabel);
+    weatherPanelLayout->addSpacing(10);
+    weatherPanelLayout->addWidget(weatherApparentTemperatureLabel);
+    weatherPanelLayout->addSpacing(10);
+    weatherPanelLayout->addWidget(weatherWindLabel);
     weatherPanelLayout->setContentsMargins(0, 0, 0, 0);
-
-    // Set the layout for the weather panel
     weatherPanel->setLayout(weatherPanelLayout);
     weatherPanelLayout->setAlignment(Qt::AlignCenter);
 }
 
-// Not yet used
-void HomeScreen::updateWeatherPanel(const QString &condition, const QString &temperature, const QString &feelsliketemperature)
+void HomeScreen::updateWeatherPanel(const QString &condition, const QString &temperature, const QString &apparentTemperature, double windSpeedVal, double windDirVal)
 {
-    // Update the weather panel labels with provided information
-    weatherConditionLabel->setText(condition);
     weatherTemperatureLabel->setText(temperature);
-    weatherFeelsLikeTemperatureLabel->setText(feelsliketemperature);
+    weatherApparentTemperatureLabel->setText(apparentTemperature);
+
+    QString iconPath = "";
+
+    if (condition == "Clear-Day") {
+        iconPath += "weather-clear-symbolic.symbolic.png";
+    } else if (condition == "Clear-Night") {
+        iconPath += "weather-clear-night-symbolic.symbolic.png";
+    } else if (condition == "Overcast") {
+        iconPath += "weather-overcast-symbolic.symbolic.png";
+    } else if (condition == "Rain") {
+        iconPath += "weather-showers-symbolic.symbolic.png";
+    } else if (condition == "Few-Clouds-Day") {
+        iconPath += "weather-few-clouds-symbolic.symbolic.png";
+    } else if (condition == "Few-Clouds-Night") {
+        iconPath += "weather-few-clouds-night-symbolic.symbolic.png";
+    } else if (condition == "Snow") {
+        iconPath += "weather-snow-symbolic.symbolic.png";
+    } else if (condition == "Windy-Day" || condition == "Windy-Night") {
+        iconPath += "weather-windy-symbolic.symbolic.png";
+    } else {
+        iconPath += "weather-severe-alert-symbolic.symbolic.png";
+    }
+
+    QPixmap icon(iconPath);
+    if (!icon.isNull()) {
+        QPixmap whiteIcon = recolorIcon(icon).scaled(100,100, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        weatherIconLabel->setPixmap(whiteIcon);
+    } else {
+        qDebug() << "Icon not found at:" << iconPath;
+    }
+
+    double dir = fmod((windDirVal + 22.5), 360);
+    int index = (int)(dir / 45.0);
+    QStringList directions = {"N","NE","E","SE","S","SW","W","NW"};
+    QString directionStr = directions.at(index % 8);
+
+    QString windStr = "Wind: " + QString::number(windSpeedVal, 'f', 0) + " m/s" + directionStr;
+    weatherWindLabel->setText(windStr);
 }
 
 void HomeScreen::setUpOptionPanel()
@@ -446,8 +541,8 @@ void HomeScreen::allDevicesButtons()
     QWidget *smallItemButtonsWidget = new QWidget;
 
     // Define buttons sizes
-    QSize smallItemButtonSize(220, 220);
-    QSize largeItemButtonSize(450, 450);
+    QSize smallItemButtonSize(170, 170);
+    QSize largeItemButtonSize(350, 350);
 
     // Default style for item buttons
     QString itemButtonStyle = QString("background-color: rgba(27,33,52,200);"
@@ -502,8 +597,8 @@ void HomeScreen::pcButtons()
     QWidget *smallItemButtonsWidget = new QWidget;
 
     // Define buttons sizes
-    QSize smallItemButtonSize(220, 220);
-    QSize largeItemButtonSize(450, 450);
+    QSize smallItemButtonSize(170, 170);
+    QSize largeItemButtonSize(350, 350);
 
     // Default style for item buttons
     QString itemButtonStyle = QString("background-color: rgba(27,33,52,200);"

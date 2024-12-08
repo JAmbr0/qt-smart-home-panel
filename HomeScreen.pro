@@ -13,13 +13,15 @@ SOURCES += \
     Main.cpp \
     NetworkControls.cpp \
     SecurityControls.cpp \
-    ToggleButton.cpp
+    ToggleButton.cpp \
+    Weather.cpp
 
 HEADERS += \
     HomeScreen.h \
     NetworkControls.h \
     SecurityControls.h \
-    ToggleButton.h
+    ToggleButton.h \
+    Weather.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
